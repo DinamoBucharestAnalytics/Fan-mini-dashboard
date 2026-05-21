@@ -144,42 +144,45 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
-    st.sidebar.header("Filters")
     work = df.copy()
 
     def multiselect_filter(label: str, col: str):
         values = sorted([v for v in work[col].dropna().astype(str).unique() if v and v != "nan"])
-        selected = st.sidebar.multiselect(label, values)
+        selected = st.multiselect(label, values)
         return selected
 
-    gender = multiselect_filter("Gender", "Gen")
-    if gender:
-        work = work[work["Gen"].astype(str).isin(gender)]
+    filter_cols = st.columns(3)
+    with filter_cols[0]:
+        gender = multiselect_filter("Gender", "Gen")
+        if gender:
+            work = work[work["Gen"].astype(str).isin(gender)]
 
-    age_values = [str(v) for v in work["age_band"].dropna().astype(str).unique()]
-    age_order = ["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
-    age_values = [v for v in age_order if v in age_values]
-    age = st.sidebar.multiselect("Age band", age_values)
-    if age:
-        work = work[work["age_band"].astype(str).isin(age)]
+        country = multiselect_filter("Country", "Țară de reședință")
+        if country:
+            work = work[work["Țară de reședință"].astype(str).isin(country)]
 
-    country = multiselect_filter("Country", "Țară de reședință")
-    if country:
-        work = work[work["Țară de reședință"].astype(str).isin(country)]
+    with filter_cols[1]:
+        age_values = [str(v) for v in work["age_band"].dropna().astype(str).unique()]
+        age_order = ["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
+        age_values = [v for v in age_order if v in age_values]
+        age = st.multiselect("Age band", age_values)
+        if age:
+            work = work[work["age_band"].astype(str).isin(age)]
 
-    county = multiselect_filter("County", "Județ atribuit")
-    if county:
-        work = work[work["Județ atribuit"].astype(str).isin(county)]
+        county = multiselect_filter("County", "Județ atribuit")
+        if county:
+            work = work[work["Județ atribuit"].astype(str).isin(county)]
 
-    region = multiselect_filter("Region", "Regiune atribuită")
-    if region:
-        work = work[work["Regiune atribuită"].astype(str).isin(region)]
+    with filter_cols[2]:
+        region = multiselect_filter("Region", "Regiune atribuită")
+        if region:
+            work = work[work["Regiune atribuită"].astype(str).isin(region)]
 
-    tenure = multiselect_filter("Supporter tenure", "De cât timp ești suporter Dinamo?")
-    if tenure:
-        work = work[work["De cât timp ești suporter Dinamo?"].astype(str).isin(tenure)]
+        tenure = multiselect_filter("Supporter tenure", "De cât timp ești suporter Dinamo?")
+        if tenure:
+            work = work[work["De cât timp ești suporter Dinamo?"].astype(str).isin(tenure)]
 
-    st.sidebar.metric("Respondents", f"{len(work):,}")
+    st.metric("Respondents after filters", f"{len(work):,}")
     return work
 
 
@@ -480,14 +483,22 @@ def main():
         """,
         unsafe_allow_html=True,
     )
-    st.title("Dinamo Fan Survey Dashboard")
-
     df, _ = load_workbook(DATA_PATH)
     df = prepare_data(df)
-    filtered = apply_filters(df)
+
+    st.sidebar.title("Menu")
+    menu = st.sidebar.radio(
+        "Dashboard section",
+        ["Demographics", "Sentiment", "Club"],
+        label_visibility="collapsed",
+    )
+
+    st.title("Dinamo Fan Survey Dashboard")
+    st.subheader(menu)
+    with st.expander("Filters", expanded=False):
+        filtered = apply_filters(df)
 
     st.caption(f"Showing {len(filtered):,} of {len(df):,} respondents")
-    menu = st.radio("Menu", ["Demographics", "Sentiment", "Club"], horizontal=True)
     if menu == "Demographics":
         demographics(filtered)
     elif menu == "Sentiment":
