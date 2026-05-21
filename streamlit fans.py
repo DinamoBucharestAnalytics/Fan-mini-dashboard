@@ -463,7 +463,9 @@ def word_cloud(df: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(14, 8))
     ax.imshow(wc, interpolation="bilinear")
     ax.axis("off")
-    st.pyplot(fig, use_container_width=True)
+    left, right = st.columns([1, 1])
+    with left:
+        st.pyplot(fig, use_container_width=True)
     plt.close(fig)
 
 
