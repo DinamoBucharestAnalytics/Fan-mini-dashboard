@@ -8,7 +8,7 @@ The previous social-media dashboard is preserved on the `social-media` branch.
 
 ```bash
 pip install -r requirements.txt
-streamlit run app.py
+streamlit run "streamlit fans.py"
 ```
 
 ## Data
@@ -25,4 +25,3 @@ The committed workbook is sanitized for public use:
 - no email addresses
 - no raw long-form open answers
 - only derived category/summary fields needed for charts
-
