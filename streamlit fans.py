@@ -302,19 +302,21 @@ def romania_county_map(df: pd.DataFrame):
     if mappable.empty:
         st.info("No counties matched the Romania map.")
         return
+    mappable["share"] = mappable["count"] / mappable["count"].sum()
+    mappable["color_value"] = mappable["count"].map(lambda value: math.log10(value + 1))
     fig = px.choropleth(
         mappable,
         geojson=geojson,
         locations="geojson_name",
         featureidkey="properties.name",
-        color="count",
+        color="color_value",
         hover_name="Județ atribuit",
-        hover_data={"count": True, "geojson_name": False},
+        hover_data={"count": True, "share": ":.1%", "color_value": False, "geojson_name": False},
         color_continuous_scale=RED_SCALE,
         title="Respondents by county",
     )
     fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Respondents")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -328,17 +330,19 @@ def world_country_map(df: pd.DataFrame):
     if mappable.empty:
         st.info("No countries matched the world map.")
         return
+    mappable["share"] = mappable["count"] / mappable["count"].sum()
+    mappable["color_value"] = mappable["count"].map(lambda value: math.log10(value + 1))
     fig = px.choropleth(
         mappable,
         locations="iso3",
-        color="count",
+        color="color_value",
         hover_name="country_norm",
-        hover_data={"count": True, "iso3": False},
+        hover_data={"count": True, "share": ":.1%", "color_value": False, "iso3": False},
         color_continuous_scale=RED_SCALE,
         title="Respondents by country",
     )
     fig.update_geos(showcoastlines=True, showcountries=True, lonaxis_range=(-170, 45), lataxis_range=(10, 75))
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Respondents")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
 
 
