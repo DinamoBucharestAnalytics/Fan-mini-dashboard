@@ -449,22 +449,6 @@ def ordered_likert_chart(df: pd.DataFrame, col: str, title: str, order: list[str
     bar_count(df, col, title, order=order)
 
 
-def heatmap_theme_tone(df: pd.DataFrame):
-    table = pd.crosstab(df["Mesaj pentru Dinamo - temă"], df["Mesaj pentru Dinamo - ton"])
-    if table.empty:
-        st.info("No message data for the current filters.")
-        return
-    fig = px.imshow(
-        table,
-        text_auto=True,
-        color_continuous_scale=RED_SCALE,
-        title="Message theme x tone",
-        aspect="auto",
-    )
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0))
-    st.plotly_chart(fig, use_container_width=True)
-
-
 def demographics(df: pd.DataFrame):
     tabs = st.tabs(["Age", "Gender", "County", "Region", "Country", "Education", "Children", "Children at matches"])
     with tabs[0]:
@@ -501,7 +485,7 @@ def demographics(df: pd.DataFrame):
 
 
 def sentiment(df: pd.DataFrame):
-    tabs = st.tabs(["Emotional connection", "Off-field evaluation", "One-word emotion", "Message tone", "Message theme", "Message theme x tone"])
+    tabs = st.tabs(["Emotional connection", "Off-field evaluation", "One-word emotion", "Message tone", "Message theme"])
     with tabs[0]:
         score = pd.to_numeric(df["Cât de conectat te simți emoțional cu Dinamo?"], errors="coerce")
         c1, c2 = st.columns(2)
@@ -523,8 +507,6 @@ def sentiment(df: pd.DataFrame):
         bar_count(df, "Mesaj pentru Dinamo - ton", "Message tone")
     with tabs[4]:
         bar_count(df, "Mesaj pentru Dinamo - temă", "Message theme", horizontal=True)
-    with tabs[5]:
-        heatmap_theme_tone(df)
 
 
 def club(df: pd.DataFrame):
