@@ -48,6 +48,7 @@ COUNTRY_NORMALIZE = {
     "anglia": "United Kingdom",
     "sua": "United States",
     "statele unite": "United States",
+    "statele unite ale americii": "United States",
     "canada": "Canada",
     "austria": "Austria",
     "suedia": "Sweden",
@@ -59,6 +60,16 @@ COUNTRY_NORMALIZE = {
     "cipru": "Cyprus",
     "turcia": "Turkey",
     "ucraina": "Ukraine",
+    "cehia": "Czechia",
+    "luxemburg": "Luxembourg",
+    "thailanda": "Thailand",
+    "malta": "Malta",
+    "lituania": "Lithuania",
+    "islanda": "Iceland",
+    "noua zeelanda": "New Zealand",
+    "polonia": "Poland",
+    "filipine": "Philippines",
+    "finlanda": "Finland",
 }
 
 ISO3 = {
@@ -84,6 +95,16 @@ ISO3 = {
     "Cyprus": "CYP",
     "Turkey": "TUR",
     "Ukraine": "UKR",
+    "Czechia": "CZE",
+    "Luxembourg": "LUX",
+    "Thailand": "THA",
+    "Malta": "MLT",
+    "Lithuania": "LTU",
+    "Iceland": "ISL",
+    "New Zealand": "NZL",
+    "Poland": "POL",
+    "Philippines": "PHL",
+    "Finland": "FIN",
 }
 
 
