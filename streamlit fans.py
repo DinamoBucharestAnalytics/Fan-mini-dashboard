@@ -307,6 +307,61 @@ def split_multiselect_counts(df: pd.DataFrame, col: str) -> pd.DataFrame:
     return out
 
 
+def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: bool = True):
+    if data.empty:
+        st.info("No data for the current filters.")
+        return
+    plot_data = data.copy()
+    plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
+    if horizontal:
+        plot_data = plot_data.sort_values("count")
+        fig = px.bar(
+            plot_data,
+            x="count",
+            y=label_col,
+            orientation="h",
+            text="percentage_label",
+            title=title,
+            custom_data=["count", "percentage"],
+        )
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+    else:
+        fig = px.bar(
+            plot_data,
+            x=label_col,
+            y="count",
+            text="percentage_label",
+            title=title,
+            custom_data=["count", "percentage"],
+        )
+        fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+    fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def logo_mention_counts(df: pd.DataFrame) -> pd.DataFrame:
+    total = len(df)
+    mentioned = df["Siglă menționată"].fillna("").astype(str).str.strip().eq("Da").sum()
+    data = pd.DataFrame(
+        {
+            "Siglă menționată": ["Da", "Nu"],
+            "count": [mentioned, total - mentioned],
+        }
+    )
+    data["percentage"] = data["count"] / total if total else 0
+    return data
+
+
+def logo_sentiment_counts(df: pd.DataFrame) -> pd.DataFrame:
+    total = len(df)
+    order = ["sigla_pozitiv", "sigla_negativ", "sigla_mixt", "sigla_neutru"]
+    counts = df["Siglă sentiment"].dropna().astype(str).str.strip().value_counts()
+    data = pd.DataFrame({"Siglă sentiment": order, "count": [int(counts.get(item, 0)) for item in order]})
+    data["percentage"] = data["count"] / total if total else 0
+    return data
+
+
 def romania_county_map(df: pd.DataFrame):
     geojson = load_geojson(RO_GEOJSON_PATH)
     lookup = {}
@@ -497,9 +552,25 @@ def club(df: pd.DataFrame):
     with tabs[3]:
         col1, col2 = st.columns(2)
         with col1:
-            donut(df, "Siglă menționată", "Logo mentioned")
+            mention_data = logo_mention_counts(df)
+            fig = px.pie(
+                mention_data,
+                names="Siglă menționată",
+                values="count",
+                hole=0.55,
+                title="Logo mentioned, % of all respondents",
+                color_discrete_sequence=[DINAMO_RED, "#dddddd"],
+                custom_data=["count", "percentage"],
+            )
+            fig.update_traces(
+                textinfo="percent+label",
+                hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+            )
+            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0))
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
-            bar_count(df[df["Siglă sentiment"].notna()], "Siglă sentiment", "Logo sentiment")
+            sentiment_data = logo_sentiment_counts(df)
+            bar_from_counts(sentiment_data, "Siglă sentiment", "Logo sentiment, % of all respondents")
         sources = []
         for value in df["Coloană mențiune siglă"].dropna().astype(str):
             for source in value.split(";"):
