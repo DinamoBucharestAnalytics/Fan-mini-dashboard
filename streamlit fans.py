@@ -204,10 +204,29 @@ def bar_count(df: pd.DataFrame, col: str, title: str, order: list[str] | None = 
     if data.empty:
         st.info("No data for the current filters.")
         return
+    data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
     if horizontal:
-        fig = px.bar(data.sort_values("count"), x="count", y=col, orientation="h", text="count", title=title)
+        plot_data = data.sort_values("count")
+        fig = px.bar(
+            plot_data,
+            x="count",
+            y=col,
+            orientation="h",
+            text="percentage_label",
+            title=title,
+            custom_data=["count", "percentage"],
+        )
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     else:
-        fig = px.bar(data, x=col, y="count", text="count", title=title)
+        fig = px.bar(
+            data,
+            x=col,
+            y="count",
+            text="percentage_label",
+            title=title,
+            custom_data=["count", "percentage"],
+        )
+        fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
     fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0))
     st.plotly_chart(fig, use_container_width=True)
@@ -236,7 +255,17 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
     if data.empty:
         st.info("No data for the current filters.")
         return
-    fig = px.bar(data.sort_values("count"), x="count", y=col, orientation="h", text="count", title=title)
+    data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+    fig = px.bar(
+        data.sort_values("count"),
+        x="count",
+        y=col,
+        orientation="h",
+        text="percentage_label",
+        title=title,
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
     fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0))
     st.plotly_chart(fig, use_container_width=True)
@@ -460,7 +489,17 @@ def club(df: pd.DataFrame):
         if data.empty:
             st.info("No season ticket driver data.")
         else:
-            fig = px.bar(data.sort_values("count"), x="count", y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?", orientation="h", text="count", title="Season ticket drivers")
+            data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+            fig = px.bar(
+                data.sort_values("count"),
+                x="count",
+                y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
+                orientation="h",
+                text="percentage_label",
+                title="Season ticket drivers",
+                custom_data=["count", "percentage"],
+            )
+            fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
             fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
             fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), yaxis_title="")
             st.plotly_chart(fig, use_container_width=True)
