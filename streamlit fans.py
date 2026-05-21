@@ -422,6 +422,28 @@ def world_country_map(df: pd.DataFrame):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def interactive_word_frequency(df: pd.DataFrame):
+    data = percent_count(df, "Dinamo un cuvânt - normalizat").head(80)
+    if data.empty:
+        st.info("No words for the current filters.")
+        return
+    fig = px.treemap(
+        data,
+        path=["Dinamo un cuvânt - normalizat"],
+        values="count",
+        color="count",
+        color_continuous_scale=RED_SCALE,
+        title="Interactive word frequency map",
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(
+        texttemplate="<b>%{label}</b><br>%{customdata[1]:.1%}",
+        hovertemplate="<b>%{label}</b><br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+    )
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Count")
+    st.plotly_chart(fig, use_container_width=True)
+
+
 def word_cloud(df: pd.DataFrame):
     words = df["Dinamo un cuvânt - normalizat"].dropna().astype(str).str.strip()
     words = words[words.ne("") & words.ne("nan")]
@@ -502,6 +524,7 @@ def sentiment(df: pd.DataFrame):
     with tabs[2]:
         bar_count(df, "Dinamo un cuvânt - categorie", "One-word emotion categories", horizontal=True)
         top_bar(df, "Dinamo un cuvânt - normalizat", "Top normalized words/phrases", n=25)
+        interactive_word_frequency(df)
         word_cloud(df)
     with tabs[3]:
         bar_count(df, "Mesaj pentru Dinamo - ton", "Message tone")
