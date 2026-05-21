@@ -559,7 +559,8 @@ def club(df: pd.DataFrame):
                 values="count",
                 hole=0.55,
                 title="Logo mentioned, % of all respondents",
-                color_discrete_sequence=[DINAMO_RED, "#dddddd"],
+                color="Siglă menționată",
+                color_discrete_map={"Da": DINAMO_RED, "Nu": "#dddddd"},
                 custom_data=["count", "percentage"],
             )
             fig.update_traces(
