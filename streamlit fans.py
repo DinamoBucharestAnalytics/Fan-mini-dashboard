@@ -32,10 +32,16 @@ RED_SCALE = [
 VERTICAL_CHART_HEIGHT = 460
 MAP_CHART_HEIGHT = 600
 TREEMAP_CHART_HEIGHT = 600
+BAR_CHART_WIDTH = 900
 
 
 def horizontal_chart_height(row_count: int, minimum: int = 420, per_row: int = 34, maximum: int = 900) -> int:
     return min(max(minimum, row_count * per_row), maximum)
+
+
+def render_bar_chart(fig, width: int = BAR_CHART_WIDTH):
+    fig.update_layout(width=width)
+    st.plotly_chart(fig, use_container_width=False)
 
 COUNTRY_NORMALIZE = {
     "romania": "Romania",
@@ -228,7 +234,14 @@ def percent_count(df: pd.DataFrame, col: str, order: list[str] | None = None) ->
     return out
 
 
-def bar_count(df: pd.DataFrame, col: str, title: str, order: list[str] | None = None, horizontal: bool = False):
+def bar_count(
+    df: pd.DataFrame,
+    col: str,
+    title: str,
+    order: list[str] | None = None,
+    horizontal: bool = False,
+    fixed_width: bool = True,
+):
     data = percent_count(df, col, order=order)
     if data.empty:
         st.info("No data for the current filters.")
@@ -265,7 +278,10 @@ def bar_count(df: pd.DataFrame, col: str, title: str, order: list[str] | None = 
         xaxis_tickformat=".0%",
         yaxis_tickformat=".0%",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    if fixed_width:
+        render_bar_chart(fig)
+    else:
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def donut(df: pd.DataFrame, col: str, title: str):
@@ -309,7 +325,7 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         height=horizontal_chart_height(len(data), minimum=500, per_row=30),
         xaxis_tickformat=".0%",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    render_bar_chart(fig)
 
 
 def split_multiselect_counts(df: pd.DataFrame, col: str) -> pd.DataFrame:
@@ -327,7 +343,7 @@ def split_multiselect_counts(df: pd.DataFrame, col: str) -> pd.DataFrame:
     return out
 
 
-def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: bool = True):
+def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: bool = True, fixed_width: bool = True):
     if data.empty:
         st.info("No data for the current filters.")
         return
@@ -364,7 +380,10 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         xaxis_tickformat=".0%",
         yaxis_tickformat=".0%",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    if fixed_width:
+        render_bar_chart(fig)
+    else:
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def logo_mention_counts(df: pd.DataFrame) -> pd.DataFrame:
@@ -510,7 +529,7 @@ def demographics(df: pd.DataFrame):
             fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT, xaxis_title="Age", yaxis_title="Respondents")
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            bar_count(df, "age_band", "Age bands", order=["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"])
+            bar_count(df, "age_band", "Age bands", order=["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"], fixed_width=False)
     with tabs[1]:
         donut(df, "Gen", "Gender")
     with tabs[2]:
@@ -605,7 +624,7 @@ def club(df: pd.DataFrame):
             st.plotly_chart(fig, use_container_width=True)
         with col2:
             sentiment_data = logo_sentiment_counts(df)
-            bar_from_counts(sentiment_data, "Siglă sentiment", "Logo sentiment, % of all respondents")
+            bar_from_counts(sentiment_data, "Siglă sentiment", "Logo sentiment, % of all respondents", fixed_width=False)
         sources = []
         for value in df["Coloană mențiune siglă"].dropna().astype(str):
             for source in value.split(";"):
@@ -638,7 +657,7 @@ def club(df: pd.DataFrame):
                 xaxis_tickformat=".0%",
                 yaxis_title="",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            render_bar_chart(fig)
     with tabs[5]:
         ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", ["Deloc", "Puțin", "Destul de mult", "Foarte mult"])
     with tabs[6]:
