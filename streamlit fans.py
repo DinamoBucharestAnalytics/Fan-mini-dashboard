@@ -29,6 +29,14 @@ RED_SCALE = [
     (1.0, DINAMO_RED),
 ]
 
+VERTICAL_CHART_HEIGHT = 460
+MAP_CHART_HEIGHT = 600
+TREEMAP_CHART_HEIGHT = 600
+
+
+def horizontal_chart_height(row_count: int, minimum: int = 420, per_row: int = 34, maximum: int = 900) -> int:
+    return min(max(minimum, row_count * per_row), maximum)
+
 COUNTRY_NORMALIZE = {
     "romania": "Romania",
     "r moldova": "Moldova",
@@ -249,7 +257,14 @@ def bar_count(df: pd.DataFrame, col: str, title: str, order: list[str] | None = 
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%", yaxis_tickformat=".0%")
+    chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=chart_height,
+        xaxis_tickformat=".0%",
+        yaxis_tickformat=".0%",
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -267,7 +282,7 @@ def donut(df: pd.DataFrame, col: str, title: str):
         color_discrete_sequence=[DINAMO_RED, BLACK, "#bbbbbb", DARK_RED],
     )
     fig.update_traces(textinfo="percent+label")
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0))
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -288,7 +303,12 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
     )
     fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%")
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=horizontal_chart_height(len(data), minimum=500, per_row=30),
+        xaxis_tickformat=".0%",
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -336,7 +356,14 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%", yaxis_tickformat=".0%")
+    chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=chart_height,
+        xaxis_tickformat=".0%",
+        yaxis_tickformat=".0%",
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -392,7 +419,7 @@ def romania_county_map(df: pd.DataFrame):
         title="Respondents by county",
     )
     fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Log respondents")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -418,7 +445,7 @@ def world_country_map(df: pd.DataFrame):
         title="Respondents by country",
     )
     fig.update_geos(showcoastlines=True, showcountries=True, lonaxis_range=(-170, 45), lataxis_range=(10, 75))
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Log respondents")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -440,7 +467,7 @@ def interactive_word_frequency(df: pd.DataFrame):
         texttemplate="<b>%{label}</b><br>%{customdata[1]:.1%}",
         hovertemplate="<b>%{label}</b><br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
     )
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), coloraxis_colorbar_title="Count")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=TREEMAP_CHART_HEIGHT, coloraxis_colorbar_title="Count")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -480,7 +507,7 @@ def demographics(df: pd.DataFrame):
         with col1:
             fig = px.histogram(df, x="age_numeric", nbins=30, title="Age distribution")
             fig.update_traces(marker_color=DINAMO_RED)
-            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), xaxis_title="Age", yaxis_title="Respondents")
+            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT, xaxis_title="Age", yaxis_title="Respondents")
             st.plotly_chart(fig, use_container_width=True)
         with col2:
             bar_count(df, "age_band", "Age bands", order=["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"])
@@ -574,7 +601,7 @@ def club(df: pd.DataFrame):
                 textinfo="percent+label",
                 hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
             )
-            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0))
+            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
             st.plotly_chart(fig, use_container_width=True)
         with col2:
             sentiment_data = logo_sentiment_counts(df)
@@ -605,7 +632,12 @@ def club(df: pd.DataFrame):
             )
             fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
             fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%", yaxis_title="")
+            fig.update_layout(
+                margin=dict(l=0, r=0, t=50, b=0),
+                height=horizontal_chart_height(len(data)),
+                xaxis_tickformat=".0%",
+                yaxis_title="",
+            )
             st.plotly_chart(fig, use_container_width=True)
     with tabs[5]:
         ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", ["Deloc", "Puțin", "Destul de mult", "Foarte mult"])
