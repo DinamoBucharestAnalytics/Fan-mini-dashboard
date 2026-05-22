@@ -227,10 +227,10 @@ def bar_count(df: pd.DataFrame, col: str, title: str, order: list[str] | None = 
         return
     data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
     if horizontal:
-        plot_data = data.sort_values("count")
+        plot_data = data.sort_values("percentage")
         fig = px.bar(
             plot_data,
-            x="count",
+            x="percentage",
             y=col,
             orientation="h",
             text="percentage_label",
@@ -242,14 +242,14 @@ def bar_count(df: pd.DataFrame, col: str, title: str, order: list[str] | None = 
         fig = px.bar(
             data,
             x=col,
-            y="count",
+            y="percentage",
             text="percentage_label",
             title=title,
             custom_data=["count", "percentage"],
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0))
+    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%", yaxis_tickformat=".0%")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -278,8 +278,8 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         return
     data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
     fig = px.bar(
-        data.sort_values("count"),
-        x="count",
+        data.sort_values("percentage"),
+        x="percentage",
         y=col,
         orientation="h",
         text="percentage_label",
@@ -288,7 +288,7 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
     )
     fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0))
+    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -314,10 +314,10 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
     plot_data = data.copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
     if horizontal:
-        plot_data = plot_data.sort_values("count")
+        plot_data = plot_data.sort_values("percentage")
         fig = px.bar(
             plot_data,
-            x="count",
+            x="percentage",
             y=label_col,
             orientation="h",
             text="percentage_label",
@@ -329,14 +329,14 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         fig = px.bar(
             plot_data,
             x=label_col,
-            y="count",
+            y="percentage",
             text="percentage_label",
             title=title,
             custom_data=["count", "percentage"],
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0))
+    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%", yaxis_tickformat=".0%")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -595,8 +595,8 @@ def club(df: pd.DataFrame):
         else:
             data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
             fig = px.bar(
-                data.sort_values("count"),
-                x="count",
+                data.sort_values("percentage"),
+                x="percentage",
                 y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
                 orientation="h",
                 text="percentage_label",
@@ -605,7 +605,7 @@ def club(df: pd.DataFrame):
             )
             fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
             fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), yaxis_title="")
+            fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), xaxis_tickformat=".0%", yaxis_title="")
             st.plotly_chart(fig, use_container_width=True)
     with tabs[5]:
         ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", ["Deloc", "Puțin", "Destul de mult", "Foarte mult"])
