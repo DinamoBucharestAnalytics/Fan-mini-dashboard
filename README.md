@@ -23,5 +23,9 @@ The committed workbook is sanitized for public use:
 
 - no names
 - no email addresses
+- no exact submission timestamps
+- no city/locality-level respondent fields
 - no raw long-form open answers
 - only derived category/summary fields needed for charts
+- includes 10,499 anonymized responses from the 03.06 cleaned survey workbook
+- includes county, region, and urban/rural (`Mediu atribuit`) classifications

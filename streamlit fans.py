@@ -84,6 +84,18 @@ COUNTRY_NORMALIZE = {
     "polonia": "Poland",
     "filipine": "Philippines",
     "finlanda": "Finland",
+    "japonia": "Japan",
+    "japan": "Japan",
+    "reunion": "Réunion",
+    "réunion": "Réunion",
+    "serbia": "Serbia",
+    "gibraltar": "Gibraltar",
+    "emiratele arabe unite": "United Arab Emirates",
+    "eau": "United Arab Emirates",
+    "united arab emirates": "United Arab Emirates",
+    "australia": "Australia",
+    "afganistan": "Afghanistan",
+    "afghanistan": "Afghanistan",
 }
 
 ISO3 = {
@@ -119,6 +131,13 @@ ISO3 = {
     "Poland": "POL",
     "Philippines": "PHL",
     "Finland": "FIN",
+    "Japan": "JPN",
+    "Réunion": "REU",
+    "Serbia": "SRB",
+    "Gibraltar": "GIB",
+    "United Arab Emirates": "ARE",
+    "Australia": "AUS",
+    "Afghanistan": "AFG",
 }
 
 
@@ -212,6 +231,11 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
         region = multiselect_filter("Region", "Regiune atribuită")
         if region:
             work = work[work["Regiune atribuită"].astype(str).isin(region)]
+
+        if "Mediu atribuit" in work.columns:
+            mediu = multiselect_filter("Urban / rural", "Mediu atribuit")
+            if mediu:
+                work = work[work["Mediu atribuit"].astype(str).isin(mediu)]
 
         tenure = multiselect_filter("Supporter tenure", "De cât timp ești suporter Dinamo?")
         if tenure:
@@ -401,7 +425,7 @@ def logo_mention_counts(df: pd.DataFrame) -> pd.DataFrame:
 
 def logo_sentiment_counts(df: pd.DataFrame) -> pd.DataFrame:
     total = len(df)
-    order = ["sigla_pozitiv", "sigla_negativ", "sigla_mixt", "sigla_neutru"]
+    order = ["sigla_pozitiv", "sigla_negativ", "sigla_mixt"]
     counts = df["Siglă sentiment"].dropna().astype(str).str.strip().value_counts()
     data = pd.DataFrame({"Siglă sentiment": order, "count": [int(counts.get(item, 0)) for item in order]})
     data["percentage"] = data["count"] / total if total else 0
@@ -520,7 +544,7 @@ def ordered_likert_chart(df: pd.DataFrame, col: str, title: str, order: list[str
 
 
 def demographics(df: pd.DataFrame):
-    tabs = st.tabs(["Age", "Gender", "County", "Region", "Country", "Education", "Children", "Children at matches"])
+    tabs = st.tabs(["Age", "Gender", "County", "Region", "Urban / rural", "Country", "Education", "Children", "Children at matches"])
     with tabs[0]:
         col1, col2 = st.columns(2)
         with col1:
@@ -538,18 +562,23 @@ def demographics(df: pd.DataFrame):
     with tabs[3]:
         top_bar(df, "Regiune atribuită", "Regions", n=10)
     with tabs[4]:
+        if "Mediu atribuit" in df.columns:
+            donut(df, "Mediu atribuit", "Urban / rural")
+        else:
+            st.info("No urban/rural data in the workbook.")
+    with tabs[5]:
         world_country_map(df)
         top_bar(df, "Țară de reședință", "Top countries", n=20)
-    with tabs[5]:
+    with tabs[6]:
         ordered_likert_chart(
             df,
             "Educație",
             "Education",
             ["Școală generală", "Liceu", "Studii postliceale / Școală postliceală", "Studii universitare", "Studii postuniversitare", "Prefer să nu răspund"],
         )
-    with tabs[6]:
-        donut(df, "Ai copii?", "Children")
     with tabs[7]:
+        donut(df, "Ai copii?", "Children")
+    with tabs[8]:
         child_df = df[df["Ai copii?"].astype(str).str.lower().eq("da")]
         ordered_likert_chart(child_df, "Vii cu copiii la meci?", "Children at matches", ["Frecvent", "Uneori", "Rar", "Niciodată", "Copiii sunt prea mici momentan"])
 

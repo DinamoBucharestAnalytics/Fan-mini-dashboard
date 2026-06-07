@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent
 SOURCE_PATH = BASE_DIR / "data" / "fan_survey_dashboard.xlsx"
 OUTPUT_PATH = BASE_DIR / "fan_survey_descriptive_analytics.xlsx"
 MAIN_SHEET = "responses_with_judet"
-EXPECTED_ROWS = 6168
+EXPECTED_ROWS = 10499
 
 COUNTRY_NORMALIZE = {
     "romania": "Romania",
@@ -54,6 +54,18 @@ COUNTRY_NORMALIZE = {
     "polonia": "Poland",
     "filipine": "Philippines",
     "finlanda": "Finland",
+    "japonia": "Japan",
+    "japan": "Japan",
+    "reunion": "Réunion",
+    "réunion": "Réunion",
+    "serbia": "Serbia",
+    "gibraltar": "Gibraltar",
+    "emiratele arabe unite": "United Arab Emirates",
+    "eau": "United Arab Emirates",
+    "united arab emirates": "United Arab Emirates",
+    "australia": "Australia",
+    "afganistan": "Afghanistan",
+    "afghanistan": "Afghanistan",
 }
 
 
@@ -153,7 +165,7 @@ def logo_mentioned(df: pd.DataFrame) -> pd.DataFrame:
 
 def logo_sentiment(df: pd.DataFrame) -> pd.DataFrame:
     total = len(df)
-    order = ["sigla_pozitiv", "sigla_negativ", "sigla_mixt", "sigla_neutru"]
+    order = ["sigla_pozitiv", "sigla_negativ", "sigla_mixt"]
     counts = clean_values(df["Siglă sentiment"]).value_counts()
     out = pd.DataFrame(
         {
