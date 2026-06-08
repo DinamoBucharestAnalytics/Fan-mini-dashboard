@@ -387,6 +387,54 @@ def pie_count(
     st.plotly_chart(fig, use_container_width=True)
 
 
+def country_romania_other_pie(df: pd.DataFrame):
+    countries = df["country_norm"].dropna().astype(str).str.strip()
+    countries = countries[countries.ne("") & countries.ne("nan")]
+    if countries.empty:
+        st.info("No country data for the current filters.")
+        return
+
+    romania_count = int(countries.eq("Romania").sum())
+    other_count = int((~countries.eq("Romania")).sum())
+    total = romania_count + other_count
+    data = pd.DataFrame(
+        [
+            {"Country group": "România", "count": romania_count, "percentage": romania_count / total if total else 0},
+            {"Country group": "Others", "count": other_count, "percentage": other_count / total if total else 0},
+        ]
+    )
+    fig = px.pie(
+        data,
+        names="Country group",
+        values="count",
+        title="România vs Others",
+        color="Country group",
+        color_discrete_map={"România": DINAMO_RED, "Others": "#dddddd"},
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(
+        textinfo="label+percent",
+        textposition="outside",
+        hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        marker=dict(line=dict(color="white", width=1)),
+        automargin=True,
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=VERTICAL_CHART_HEIGHT,
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def other_countries_pie(df: pd.DataFrame):
+    country_series = df["country_norm"].fillna("").astype(str).str.strip()
+    other_df = df[country_series.ne("") & country_series.ne("nan") & country_series.ne("Romania")]
+    pie_count(other_df, "country_norm", "Others country breakdown")
+
+
 def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
     data = percent_count(df, col).head(n)
     if data.empty:
@@ -649,11 +697,12 @@ def demographics(df: pd.DataFrame):
             st.info("No urban/rural data in the workbook.")
     with tabs[5]:
         world_country_map(df)
+        top_bar(df, "Țară de reședință", "Top countries", n=20)
         col1, col2 = st.columns(2)
         with col1:
-            top_bar(df, "Țară de reședință", "Top countries", n=20)
+            country_romania_other_pie(df)
         with col2:
-            pie_count(df, "country_norm", "Country share", top_n=12)
+            other_countries_pie(df)
     with tabs[6]:
         col1, col2 = st.columns(2)
         with col1:
