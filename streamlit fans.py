@@ -30,7 +30,7 @@ PLATFORM_SOURCES = [
 ]
 SOURCE_OPTIONS = [SURVEY_SOURCE] + PLATFORM_SOURCES
 SURVEY_MENUS = ["Demographics", "Sentiment", "Club"]
-PLATFORM_MENUS = ["Demographics", "Club"]
+PLATFORM_MENUS = ["Demographics"]
 
 DINAMO_RED = "#e30613"
 DARK_RED = "#9d0208"
@@ -322,6 +322,7 @@ def social_platform_geo(df: pd.DataFrame, platform: str, level: str) -> pd.DataF
     if out["percentage"].fillna(0).sum() <= 0:
         total = out["followers"].sum()
         out["percentage"] = out["followers"] / total if total else 0
+    out["platform"] = platform
     return out.sort_values("followers", ascending=False).reset_index(drop=True)
 
 
@@ -773,16 +774,27 @@ def social_country_data(df: pd.DataFrame, platform: str) -> pd.DataFrame:
                 "country_norm": "Romania",
                 "followers": counties["followers"].sum(),
                 "percentage": counties["percentage"].sum(),
+                "platform": platform,
             }
         ]
     )
     return pd.concat([countries, romania], ignore_index=True).sort_values("followers", ascending=False)
 
 
+def social_metric_label(platform: str) -> str:
+    return "RON spent" if platform == "Merchandise" else "Followers"
+
+
+def social_log_metric_label(platform: str) -> str:
+    return "Log RON spent" if platform == "Merchandise" else "Log followers"
+
+
 def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     if data.empty:
         st.info("No data for the current source.")
         return
+    platform = data["platform"].iloc[0] if "platform" in data.columns and not data.empty else ""
+    metric_label = social_metric_label(platform)
     plot_data = data.head(20).copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
     fig = px.bar(
@@ -797,7 +809,7 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     fig.update_traces(
         marker_color=DINAMO_RED,
         textposition="outside",
-        hovertemplate="%{y}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate=f"%{{y}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
     )
     fig.update_layout(
         showlegend=False,
@@ -814,6 +826,7 @@ def social_world_map(df: pd.DataFrame, platform: str):
     if data.empty:
         st.info("No country data for this source.")
         return
+    metric_label = social_metric_label(platform)
     data["iso3"] = data["country_norm"].map(ISO3)
     mappable = data[data["iso3"].notna()].copy()
     if mappable.empty:
@@ -825,9 +838,13 @@ def social_world_map(df: pd.DataFrame, platform: str):
         locations="iso3",
         color="color_value",
         hover_name="country_norm",
-        hover_data={"followers": ":,.0f", "percentage": ":.1%", "color_value": False, "iso3": False},
+        custom_data=["followers", "percentage"],
+        hover_data={"color_value": False, "iso3": False},
         color_continuous_scale=RED_SCALE,
-        title=f"Followers by country - {platform}",
+        title=f"{metric_label} by country - {platform}",
+    )
+    fig.update_traces(
+        hovertemplate=f"<b>%{{hovertext}}</b><br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>"
     )
     fig.update_geos(
         showcoastlines=True,
@@ -841,12 +858,13 @@ def social_world_map(df: pd.DataFrame, platform: str):
         lonaxis_range=(-170, 45),
         lataxis_range=(10, 75),
     )
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log followers")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title=social_log_metric_label(platform))
     st.plotly_chart(fig, use_container_width=True)
 
 
 def social_county_map(df: pd.DataFrame, platform: str):
     geojson = load_geojson(RO_GEOJSON_PATH)
+    metric_label = social_metric_label(platform)
     county_rows = []
     lookup = {}
     for feature in geojson.get("features", []):
@@ -874,14 +892,19 @@ def social_county_map(df: pd.DataFrame, platform: str):
         featureidkey="properties.name",
         color="color_value",
         hover_name="county_norm",
-        hover_data={"followers": ":,.0f", "percentage": ":.1%", "color_value": False, "geojson_name": False},
+        custom_data=["followers", "percentage"],
+        hover_data={"color_value": False, "geojson_name": False},
         color_continuous_scale=RED_SCALE,
         range_color=(0, max_color if max_color > 0 else 1),
-        title=f"Followers by county/region - {platform}",
+        title=f"{metric_label} by county/region - {platform}",
     )
-    fig.update_traces(marker_line_color="#b8b8b8", marker_line_width=0.6)
+    fig.update_traces(
+        hovertemplate=f"<b>%{{hovertext}}</b><br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
+        marker_line_color="#b8b8b8",
+        marker_line_width=0.6,
+    )
     fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log followers")
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title=social_log_metric_label(platform))
     st.plotly_chart(fig, use_container_width=True)
     unmapped = data[data["geojson_name"].isna()].copy()
     if not unmapped.empty:
