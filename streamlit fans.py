@@ -432,7 +432,36 @@ def country_romania_other_pie(df: pd.DataFrame):
 def other_countries_pie(df: pd.DataFrame):
     country_series = df["country_norm"].fillna("").astype(str).str.strip()
     other_df = df[country_series.ne("") & country_series.ne("nan") & country_series.ne("Romania")]
-    pie_count(other_df, "country_norm", "Others country breakdown")
+    data = percent_count(other_df, "country_norm").head(10)
+    if data.empty:
+        st.info("No other country data for the current filters.")
+        return
+
+    total = int(data["count"].sum())
+    data["percentage"] = data["count"] / total if total else 0
+    fig = px.pie(
+        data,
+        names="country_norm",
+        values="count",
+        title="Top 10 other countries",
+        color_discrete_sequence=PIE_COLORS,
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(
+        textinfo="label+percent",
+        textposition="outside",
+        hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        marker=dict(line=dict(color="white", width=1)),
+        automargin=True,
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=VERTICAL_CHART_HEIGHT,
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
