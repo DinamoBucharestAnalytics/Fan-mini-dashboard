@@ -703,7 +703,9 @@ def demographics(df: pd.DataFrame):
         with col2:
             pie_count(df, "Gen", "Gender share")
     with tabs[2]:
-        romania_county_map(df)
+        _, map_col, _ = st.columns([1, 2, 1])
+        with map_col:
+            romania_county_map(df)
         col1, col2 = st.columns(2)
         with col1:
             top_bar(df, "Județ atribuit", "Top counties")
