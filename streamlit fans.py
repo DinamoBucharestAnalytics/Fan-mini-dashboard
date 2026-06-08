@@ -14,8 +14,23 @@ from wordcloud import WordCloud
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_PATH = BASE_DIR / "data" / "fan_survey_dashboard.xlsx"
+SOCIAL_MEDIA_DIR = BASE_DIR / "data" / "social_media"
+SOCIAL_MEDIA_GEO_PATH = SOCIAL_MEDIA_DIR / "Power BI source.xlsx"
+SOCIAL_MEDIA_DEMO_PATH = SOCIAL_MEDIA_DIR / "Age and sex.xlsx"
 RO_GEOJSON_PATH = BASE_DIR / "romania.geojson"
 LOGO_PATH = BASE_DIR / "data" / "img" / "dinamo-data-analysis-red.ico"
+
+SURVEY_SOURCE = "Survey (May 2026)"
+PLATFORM_SOURCES = [
+    "Club mobile app",
+    "Club Facebook",
+    "Fan Facebook (RD1948)",
+    "Fan Youtube (RD1948)",
+    "Merchandise",
+]
+SOURCE_OPTIONS = [SURVEY_SOURCE] + PLATFORM_SOURCES
+SURVEY_MENUS = ["Demographics", "Sentiment", "Club"]
+PLATFORM_MENUS = ["Demographics", "Club"]
 
 DINAMO_RED = "#e30613"
 DARK_RED = "#9d0208"
@@ -212,6 +227,102 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     df["country_display"] = df["Țară de reședință"].fillna("Unknown").astype(str).str.strip()
     df["country_norm"] = df["country_display"].map(lambda x: COUNTRY_NORMALIZE.get(normalize_text(x), x))
     return df
+
+
+def _fraction(value: pd.Series) -> pd.Series:
+    numeric = pd.to_numeric(value, errors="coerce")
+    return numeric / 100 if numeric.max(skipna=True) > 1 else numeric
+
+
+def _expand_social_rows(df: pd.DataFrame) -> pd.DataFrame:
+    country_splits = {
+        "benelux": [("Belgium", 0.5), ("Netherlands", 0.5)],
+    }
+    county_splits = {
+        "timisoara": [("Timis", 0.75), ("Caras-Severin", 0.25)],
+        "cluj alba": [("Cluj", 0.66), ("Alba", 0.34)],
+        "galati braila": [("Galati", 0.5), ("Braila", 0.5)],
+    }
+    expanded = []
+    for _, row in df.iterrows():
+        key = normalize_text(row["geography"])
+        splits = country_splits.get(key) if row["level"] == "country" else county_splits.get(key)
+        if not splits:
+            expanded.append(row)
+            continue
+        for geography, fraction in splits:
+            new_row = row.copy()
+            new_row["geography"] = geography
+            new_row["followers"] = row["followers"] * fraction
+            new_row["percent_on_platform"] = row["percent_on_platform"] * fraction
+            expanded.append(new_row)
+    return pd.DataFrame(expanded)
+
+
+@st.cache_data
+def load_social_media_geo(path: Path) -> pd.DataFrame:
+    df = pd.read_excel(path)
+    df.columns = [str(col).strip().lower() for col in df.columns]
+    df = df.rename(columns={"percent on the platform": "percent_on_platform"})
+    required = {"geography", "level", "platform", "followers", "percent_on_platform"}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing social-media geography columns: {', '.join(sorted(missing))}")
+    df["geography"] = df["geography"].astype(str).str.replace("\u00a0", " ", regex=False).str.strip()
+    df["level"] = df["level"].astype(str).str.lower().str.strip()
+    df["platform"] = df["platform"].astype(str).str.strip()
+    df["followers"] = pd.to_numeric(df["followers"], errors="coerce").fillna(0)
+    df["percent_on_platform"] = pd.to_numeric(df["percent_on_platform"], errors="coerce").fillna(0)
+    df = _expand_social_rows(df)
+    df["country_norm"] = df["geography"].map(lambda value: COUNTRY_NORMALIZE.get(normalize_text(value), value))
+    df["county_norm"] = df["geography"].map(lambda value: normalize_text(value).title().replace(" ", "-"))
+    return df[df["platform"].isin(PLATFORM_SOURCES)].copy()
+
+
+@st.cache_data
+def load_social_media_demographics(path: Path) -> pd.DataFrame:
+    df = pd.read_excel(path)
+    df = df.rename(
+        columns={
+            "Age": "age",
+            "Percent on platform": "pct_on_platform",
+            "Total followers in age group": "total_in_age",
+            "Men (percent)": "men_pct",
+            "Women (percent)": "women_pct",
+            "Men (absolute value)": "men_abs",
+            "Women (absolute value)": "women_abs",
+            "Platform": "platform",
+        }
+    )
+    required = {"age", "pct_on_platform", "total_in_age", "men_pct", "women_pct", "men_abs", "women_abs", "platform"}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing social-media demographics columns: {', '.join(sorted(missing))}")
+    df["platform"] = df["platform"].astype(str).str.strip()
+    df["age"] = df["age"].astype(str).str.strip()
+    for col in ["pct_on_platform", "total_in_age", "men_pct", "women_pct", "men_abs", "women_abs"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    df["pct_on_platform"] = _fraction(df["pct_on_platform"])
+    df["men_pct"] = _fraction(df["men_pct"])
+    df["women_pct"] = _fraction(df["women_pct"])
+    return df[df["platform"].isin(PLATFORM_SOURCES)].copy()
+
+
+def social_platform_geo(df: pd.DataFrame, platform: str, level: str) -> pd.DataFrame:
+    work = df[(df["platform"].eq(platform)) & (df["level"].eq(level))].copy()
+    if level == "country":
+        group_col = "country_norm"
+        work = work[~work[group_col].map(normalize_text).isin({"alte tari", "benelux"})]
+    else:
+        group_col = "county_norm"
+    if work.empty:
+        return pd.DataFrame(columns=[group_col, "followers", "percentage"])
+    out = work.groupby(group_col, as_index=False).agg({"followers": "sum", "percent_on_platform": "sum"})
+    out["percentage"] = _fraction(out["percent_on_platform"])
+    if out["percentage"].fillna(0).sum() <= 0:
+        total = out["followers"].sum()
+        out["percentage"] = out["followers"] / total if total else 0
+    return out.sort_values("followers", ascending=False).reset_index(drop=True)
 
 
 def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
@@ -630,6 +741,282 @@ def world_country_map(df: pd.DataFrame):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def social_country_data(df: pd.DataFrame, platform: str) -> pd.DataFrame:
+    countries = social_platform_geo(df, platform, "country")
+    if countries["country_norm"].eq("Romania").any():
+        return countries
+    counties = social_platform_geo(df, platform, "county")
+    if counties.empty:
+        return countries
+    romania = pd.DataFrame(
+        [
+            {
+                "country_norm": "Romania",
+                "followers": counties["followers"].sum(),
+                "percentage": counties["percentage"].sum(),
+            }
+        ]
+    )
+    return pd.concat([countries, romania], ignore_index=True).sort_values("followers", ascending=False)
+
+
+def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
+    if data.empty:
+        st.info("No data for the current source.")
+        return
+    plot_data = data.head(20).copy()
+    plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
+    fig = px.bar(
+        plot_data.sort_values("percentage"),
+        x="percentage",
+        y=label_col,
+        orientation="h",
+        text="percentage_label",
+        title=title,
+        custom_data=["followers", "percentage"],
+    )
+    fig.update_traces(
+        marker_color=DINAMO_RED,
+        textposition="outside",
+        hovertemplate="%{y}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=horizontal_chart_height(len(plot_data), minimum=500, per_row=30),
+        xaxis_tickformat=".0%",
+        yaxis_title="",
+    )
+    render_bar_chart(fig)
+
+
+def social_world_map(df: pd.DataFrame, platform: str):
+    data = social_country_data(df, platform)
+    if data.empty:
+        st.info("No country data for this source.")
+        return
+    data["iso3"] = data["country_norm"].map(ISO3)
+    mappable = data[data["iso3"].notna()].copy()
+    if mappable.empty:
+        st.info("No countries matched the world map.")
+        return
+    mappable["color_value"] = mappable["followers"].map(lambda value: math.log10(value + 1))
+    fig = px.choropleth(
+        mappable,
+        locations="iso3",
+        color="color_value",
+        hover_name="country_norm",
+        hover_data={"followers": ":,.0f", "percentage": ":.1%", "color_value": False, "iso3": False},
+        color_continuous_scale=RED_SCALE,
+        title=f"Followers by country - {platform}",
+    )
+    fig.update_geos(showcoastlines=True, showcountries=True, lonaxis_range=(-170, 45), lataxis_range=(10, 75))
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log followers")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def social_county_map(df: pd.DataFrame, platform: str):
+    geojson = load_geojson(RO_GEOJSON_PATH)
+    lookup = {
+        normalize_text(feature.get("properties", {}).get("name", "")): feature.get("properties", {}).get("name", "")
+        for feature in geojson.get("features", [])
+    }
+    data = social_platform_geo(df, platform, "county")
+    if data.empty:
+        st.info("No county or region data for this source.")
+        return
+    data["geojson_name"] = data["county_norm"].map(lambda value: lookup.get(normalize_text(value)))
+    mappable = data[data["geojson_name"].notna()].copy()
+    if mappable.empty:
+        st.info("No counties matched the Romania map.")
+        return
+    mappable["color_value"] = mappable["followers"].map(lambda value: math.log10(value + 1))
+    fig = px.choropleth(
+        mappable,
+        geojson=geojson,
+        locations="geojson_name",
+        featureidkey="properties.name",
+        color="color_value",
+        hover_name="county_norm",
+        hover_data={"followers": ":,.0f", "percentage": ":.1%", "color_value": False, "geojson_name": False},
+        color_continuous_scale=RED_SCALE,
+        title=f"Followers by county/region - {platform}",
+    )
+    fig.update_geos(fitbounds="locations", visible=False)
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log followers")
+    st.plotly_chart(fig, use_container_width=True)
+    unmapped = data[data["geojson_name"].isna()].copy()
+    if not unmapped.empty:
+        with st.expander("Unmapped county/region labels"):
+            st.dataframe(unmapped[["county_norm", "followers", "percentage"]], use_container_width=True, hide_index=True)
+
+
+def social_age_data(demo_df: pd.DataFrame, platform: str) -> pd.DataFrame:
+    view = demo_df[demo_df["platform"].eq(platform)].copy()
+    if view.empty:
+        return view
+    age_order = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
+    view["age"] = pd.Categorical(view["age"], categories=age_order, ordered=True)
+    view = view.sort_values("age")
+    if view["pct_on_platform"].fillna(0).sum() <= 0:
+        total = view["total_in_age"].sum()
+        view["pct_on_platform"] = view["total_in_age"] / total if total else 0
+    return view
+
+
+def social_age_bar(demo_df: pd.DataFrame, platform: str):
+    data = social_age_data(demo_df, platform)
+    if data.empty:
+        st.info(f"No age demographic data available for {platform}.")
+        return
+    data["percentage_label"] = data["pct_on_platform"].map(lambda value: f"{value:.1%}")
+    fig = px.bar(
+        data,
+        x="age",
+        y="pct_on_platform",
+        text="percentage_label",
+        title=f"Age distribution - {platform}",
+        custom_data=["total_in_age", "pct_on_platform"],
+    )
+    fig.update_traces(
+        marker_color=DINAMO_RED,
+        textposition="outside",
+        hovertemplate="%{x}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=VERTICAL_CHART_HEIGHT,
+        yaxis_tickformat=".0%",
+        xaxis_title="Age",
+        yaxis_title="Percentage",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def social_age_pie(demo_df: pd.DataFrame, platform: str):
+    data = social_age_data(demo_df, platform)
+    if data.empty:
+        st.info(f"No age demographic data available for {platform}.")
+        return
+    fig = px.pie(
+        data,
+        names="age",
+        values="total_in_age",
+        title=f"Age share - {platform}",
+        color_discrete_sequence=PIE_COLORS,
+        custom_data=["total_in_age", "pct_on_platform"],
+    )
+    fig.update_traces(
+        textinfo="label+percent",
+        textposition="outside",
+        hovertemplate="%{label}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        marker=dict(line=dict(color="white", width=1)),
+        automargin=True,
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=VERTICAL_CHART_HEIGHT,
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def social_sex_data(demo_df: pd.DataFrame, platform: str) -> pd.DataFrame:
+    view = demo_df[demo_df["platform"].eq(platform)].copy()
+    if view.empty:
+        return pd.DataFrame(columns=["Sex", "followers", "percentage"])
+    data = pd.DataFrame(
+        [
+            {"Sex": "Men", "followers": view["men_abs"].sum()},
+            {"Sex": "Women", "followers": view["women_abs"].sum()},
+        ]
+    )
+    total = data["followers"].sum()
+    data["percentage"] = data["followers"] / total if total else 0
+    return data
+
+
+def social_sex_charts(demo_df: pd.DataFrame, platform: str):
+    data = social_sex_data(demo_df, platform)
+    if data.empty or data["followers"].sum() <= 0:
+        st.info(f"No sex demographic data available for {platform}.")
+        return
+    col1, col2 = st.columns(2)
+    with col1:
+        fig = px.pie(
+            data,
+            names="Sex",
+            values="followers",
+            hole=0.55,
+            title=f"Sex distribution - {platform}",
+            color="Sex",
+            color_discrete_map={"Men": DINAMO_RED, "Women": "#dddddd"},
+            custom_data=["followers", "percentage"],
+        )
+        fig.update_traces(
+            textinfo="label+percent",
+            hovertemplate="%{label}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        )
+        fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+        fig = px.bar(
+            data,
+            x="Sex",
+            y="percentage",
+            text="percentage_label",
+            title=f"Sex share - {platform}",
+            custom_data=["followers", "percentage"],
+        )
+        fig.update_traces(
+            marker_color=[DINAMO_RED, "#dddddd"],
+            textposition="outside",
+            hovertemplate="%{x}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        )
+        fig.update_layout(
+            showlegend=False,
+            margin=dict(l=0, r=0, t=50, b=0),
+            height=VERTICAL_CHART_HEIGHT,
+            yaxis_tickformat=".0%",
+            yaxis_title="Percentage",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def platform_demographics(demo_df: pd.DataFrame, platform: str):
+    tabs = st.tabs(["Age", "Sex"])
+    with tabs[0]:
+        if social_age_data(demo_df, platform).empty:
+            st.info(f"No age demographic data available for {platform}.")
+        else:
+            col1, col2 = st.columns(2)
+            with col1:
+                social_age_bar(demo_df, platform)
+            with col2:
+                social_age_pie(demo_df, platform)
+    with tabs[1]:
+        if social_sex_data(demo_df, platform).empty:
+            st.info(f"No sex demographic data available for {platform}.")
+        else:
+            social_sex_charts(demo_df, platform)
+
+
+def platform_club(geo_df: pd.DataFrame, platform: str):
+    tabs = st.tabs(["Countries", "Counties/Regions"])
+    with tabs[0]:
+        social_world_map(geo_df, platform)
+        social_top_bar(social_country_data(geo_df, platform), "country_norm", "Top countries")
+    with tabs[1]:
+        _, map_col, _ = st.columns([1, 2, 1])
+        with map_col:
+            social_county_map(geo_df, platform)
+        social_top_bar(social_platform_geo(geo_df, platform, "county"), "county_norm", "Top counties/regions")
+
+
 def interactive_word_frequency(df: pd.DataFrame):
     data = percent_count(df, "Dinamo un cuvânt - normalizat").head(80)
     if data.empty:
@@ -1005,16 +1392,24 @@ def main():
             text-align: center;
             width: 100%;
         }
+        section[data-testid="stSidebar"] [data-testid="stSelectbox"] {
+            width: 148px;
+            margin: 0 auto 1rem;
+        }
+        section[data-testid="stSidebar"] [data-testid="stSelectbox"] p {
+            font-weight: 700;
+            color: #111111;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    df, _ = load_workbook(DATA_PATH)
-    df = prepare_data(df)
+    source = st.sidebar.selectbox("Source", SOURCE_OPTIONS, index=0)
+    menu_options = SURVEY_MENUS if source == SURVEY_SOURCE else PLATFORM_MENUS
 
     menu = st.sidebar.radio(
         "Dashboard section",
-        ["Demographics", "Sentiment", "Club"],
+        menu_options,
         label_visibility="collapsed",
     )
     logo_uri = image_data_uri(LOGO_PATH, "image/x-icon")
@@ -1028,18 +1423,32 @@ def main():
         unsafe_allow_html=True,
     )
 
-    st.title("Dinamo Fan Survey Dashboard")
-    st.subheader(menu)
-    with st.expander("Filters", expanded=False):
-        filtered = apply_filters(df)
+    if source == SURVEY_SOURCE:
+        df, _ = load_workbook(DATA_PATH)
+        df = prepare_data(df)
 
-    st.caption(f"Showing {len(filtered):,} of {len(df):,} respondents")
-    if menu == "Demographics":
-        demographics(filtered)
-    elif menu == "Sentiment":
-        sentiment(filtered)
+        st.title("Dinamo Fan Survey Dashboard")
+        st.subheader(menu)
+        with st.expander("Filters", expanded=False):
+            filtered = apply_filters(df)
+
+        st.caption(f"Showing {len(filtered):,} of {len(df):,} respondents")
+        if menu == "Demographics":
+            demographics(filtered)
+        elif menu == "Sentiment":
+            sentiment(filtered)
+        else:
+            club(filtered)
     else:
-        club(filtered)
+        geo_df = load_social_media_geo(SOCIAL_MEDIA_GEO_PATH)
+        demo_df = load_social_media_demographics(SOCIAL_MEDIA_DEMO_PATH)
+
+        st.title("Dinamo Fan Analytics")
+        st.subheader(f"{source} - {menu}")
+        if menu == "Demographics":
+            platform_demographics(demo_df, source)
+        else:
+            platform_club(geo_df, source)
 
 
 if __name__ == "__main__":
