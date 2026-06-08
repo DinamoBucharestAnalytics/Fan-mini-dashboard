@@ -848,14 +848,18 @@ def main():
         }
         section[data-testid="stSidebar"] > div {
             padding-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         .sidebar-brand {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center;
             gap: 0.6rem;
-            padding: 1rem 0.1rem 0.25rem;
-            margin-top: 1rem;
+            width: 148px;
+            padding: 1rem 0 0.25rem;
+            margin: auto auto 0;
             border-top: 1px solid #eeeeee;
         }
         .sidebar-brand img {
@@ -870,14 +874,16 @@ def main():
             font-weight: 800;
             letter-spacing: 0;
             line-height: 1.1;
+            text-align: center;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 0.5rem;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] label {
-            width: 100%;
+            width: 148px;
             min-height: 44px;
             padding: 0.62rem 0.78rem;
             border: 1px solid #e5e5e5;
@@ -905,6 +911,8 @@ def main():
         section[data-testid="stSidebar"] [data-testid="stRadio"] p {
             font-weight: 700;
             font-size: 0.95rem;
+            text-align: center;
+            width: 100%;
         }
         </style>
         """,
