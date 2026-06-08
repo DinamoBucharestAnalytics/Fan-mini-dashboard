@@ -851,15 +851,16 @@ def main():
         }
         .sidebar-brand {
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.25rem 0.1rem 1.05rem;
-            margin-bottom: 0.85rem;
-            border-bottom: 1px solid #eeeeee;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 1rem 0.1rem 0.25rem;
+            margin-top: 1rem;
+            border-top: 1px solid #eeeeee;
         }
         .sidebar-brand img {
-            width: 42px;
-            height: 42px;
+            width: 84px;
+            height: 84px;
             object-fit: contain;
             flex: 0 0 auto;
         }
@@ -912,6 +913,11 @@ def main():
     df, _ = load_workbook(DATA_PATH)
     df = prepare_data(df)
 
+    menu = st.sidebar.radio(
+        "Dashboard section",
+        ["Demographics", "Sentiment", "Club"],
+        label_visibility="collapsed",
+    )
     logo_uri = image_data_uri(LOGO_PATH, "image/x-icon")
     st.sidebar.markdown(
         f"""
@@ -921,11 +927,6 @@ def main():
         </div>
         """,
         unsafe_allow_html=True,
-    )
-    menu = st.sidebar.radio(
-        "Dashboard section",
-        ["Demographics", "Sentiment", "Club"],
-        label_visibility="collapsed",
     )
 
     st.title("Dinamo Fan Survey Dashboard")
