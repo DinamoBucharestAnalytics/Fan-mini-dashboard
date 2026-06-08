@@ -28,6 +28,17 @@ RED_SCALE = [
     (0.8, "#ff3333"),
     (1.0, DINAMO_RED),
 ]
+PIE_COLORS = [
+    DINAMO_RED,
+    "#e65f5f",
+    "#f08f8f",
+    "#f4c2c2",
+    BLACK,
+    "#444444",
+    "#777777",
+    "#aaaaaa",
+    "#dddddd",
+]
 
 VERTICAL_CHART_HEIGHT = 460
 MAP_CHART_HEIGHT = 600
@@ -326,6 +337,50 @@ def donut(df: pd.DataFrame, col: str, title: str):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def pie_count(
+    df: pd.DataFrame,
+    col: str,
+    title: str,
+    order: list[str] | None = None,
+    top_n: int | None = None,
+):
+    data = percent_count(df, col, order=order)
+    if data.empty:
+        st.info("No data for the current filters.")
+        return
+
+    if top_n and len(data) > top_n:
+        top = data.head(top_n).copy()
+        other_count = int(data.iloc[top_n:]["count"].sum())
+        total = int(data["count"].sum())
+        other = pd.DataFrame([{col: "Other", "count": other_count, "percentage": other_count / total if total else 0}])
+        data = pd.concat([top, other], ignore_index=True)
+
+    fig = px.pie(
+        data,
+        names=col,
+        values="count",
+        title=title,
+        color_discrete_sequence=PIE_COLORS,
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(
+        textinfo="label+percent",
+        textposition="outside",
+        hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        marker=dict(line=dict(color="white", width=1)),
+        automargin=True,
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=VERTICAL_CHART_HEIGHT,
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
 def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
     data = percent_count(df, col).head(n)
     if data.empty:
@@ -545,6 +600,9 @@ def ordered_likert_chart(df: pd.DataFrame, col: str, title: str, order: list[str
 
 def demographics(df: pd.DataFrame):
     tabs = st.tabs(["Age", "Gender", "County", "Region", "Urban / rural", "Country", "Education", "Children", "Children at matches"])
+    age_order = ["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
+    education_order = ["Școală generală", "Liceu", "Studii postliceale / Școală postliceală", "Studii universitare", "Studii postuniversitare", "Prefer să nu răspund"]
+    children_match_order = ["Frecvent", "Uneori", "Rar", "Niciodată", "Copiii sunt prea mici momentan"]
     with tabs[0]:
         col1, col2 = st.columns(2)
         with col1:
@@ -553,34 +611,62 @@ def demographics(df: pd.DataFrame):
             fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT, xaxis_title="Age", yaxis_title="Respondents")
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            bar_count(df, "age_band", "Age bands", order=["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"], fixed_width=False)
+            bar_count(df, "age_band", "Age bands", order=age_order, fixed_width=False)
+        pie_count(df, "age_band", "Age band share", order=age_order)
     with tabs[1]:
-        donut(df, "Gen", "Gender")
+        col1, col2 = st.columns(2)
+        with col1:
+            donut(df, "Gen", "Gender")
+        with col2:
+            pie_count(df, "Gen", "Gender share")
     with tabs[2]:
         romania_county_map(df)
-        top_bar(df, "Județ atribuit", "Top counties")
+        col1, col2 = st.columns(2)
+        with col1:
+            top_bar(df, "Județ atribuit", "Top counties")
+        with col2:
+            pie_count(df, "Județ atribuit", "County share", top_n=12)
     with tabs[3]:
-        top_bar(df, "Regiune atribuită", "Regions", n=10)
+        col1, col2 = st.columns(2)
+        with col1:
+            top_bar(df, "Regiune atribuită", "Regions", n=10)
+        with col2:
+            pie_count(df, "Regiune atribuită", "Region share")
     with tabs[4]:
         if "Mediu atribuit" in df.columns:
-            donut(df, "Mediu atribuit", "Urban / rural")
+            col1, col2 = st.columns(2)
+            with col1:
+                donut(df, "Mediu atribuit", "Urban / rural")
+            with col2:
+                pie_count(df, "Mediu atribuit", "Urban / rural share")
         else:
             st.info("No urban/rural data in the workbook.")
     with tabs[5]:
         world_country_map(df)
-        top_bar(df, "Țară de reședință", "Top countries", n=20)
+        col1, col2 = st.columns(2)
+        with col1:
+            top_bar(df, "Țară de reședință", "Top countries", n=20)
+        with col2:
+            pie_count(df, "country_norm", "Country share", top_n=12)
     with tabs[6]:
-        ordered_likert_chart(
-            df,
-            "Educație",
-            "Education",
-            ["Școală generală", "Liceu", "Studii postliceale / Școală postliceală", "Studii universitare", "Studii postuniversitare", "Prefer să nu răspund"],
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(df, "Educație", "Education", education_order)
+        with col2:
+            pie_count(df, "Educație", "Education share", order=education_order)
     with tabs[7]:
-        donut(df, "Ai copii?", "Children")
+        col1, col2 = st.columns(2)
+        with col1:
+            donut(df, "Ai copii?", "Children")
+        with col2:
+            pie_count(df, "Ai copii?", "Children share")
     with tabs[8]:
         child_df = df[df["Ai copii?"].astype(str).str.lower().eq("da")]
-        ordered_likert_chart(child_df, "Vii cu copiii la meci?", "Children at matches", ["Frecvent", "Uneori", "Rar", "Niciodată", "Copiii sunt prea mici momentan"])
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(child_df, "Vii cu copiii la meci?", "Children at matches", children_match_order)
+        with col2:
+            pie_count(child_df, "Vii cu copiii la meci?", "Children at matches share", order=children_match_order)
 
 
 def sentiment(df: pd.DataFrame):
