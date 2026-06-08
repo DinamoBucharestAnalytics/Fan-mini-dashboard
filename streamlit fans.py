@@ -766,25 +766,51 @@ def club(df: pd.DataFrame):
         if data.empty:
             st.info("No season ticket driver data.")
         else:
-            data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
-            fig = px.bar(
-                data.sort_values("percentage"),
-                x="percentage",
-                y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
-                orientation="h",
-                text="percentage_label",
-                title="Season ticket drivers",
-                custom_data=["count", "percentage"],
-            )
-            fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-            fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-            fig.update_layout(
-                margin=dict(l=0, r=0, t=50, b=0),
-                height=horizontal_chart_height(len(data)),
-                xaxis_tickformat=".0%",
-                yaxis_title="",
-            )
-            render_bar_chart(fig)
+            col1, col2 = st.columns(2)
+            with col1:
+                data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+                fig = px.bar(
+                    data.sort_values("percentage"),
+                    x="percentage",
+                    y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
+                    orientation="h",
+                    text="percentage_label",
+                    title="Season ticket drivers",
+                    custom_data=["count", "percentage"],
+                )
+                fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+                fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+                fig.update_layout(
+                    margin=dict(l=0, r=0, t=50, b=0),
+                    height=horizontal_chart_height(len(data)),
+                    xaxis_tickformat=".0%",
+                    yaxis_title="",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            with col2:
+                pie_fig = px.pie(
+                    data,
+                    names="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
+                    values="count",
+                    title="Season ticket drivers share",
+                    color_discrete_sequence=PIE_COLORS,
+                    custom_data=["count", "percentage"],
+                )
+                pie_fig.update_traces(
+                    textinfo="label+percent",
+                    textposition="outside",
+                    hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
+                    marker=dict(line=dict(color="white", width=1)),
+                    automargin=True,
+                )
+                pie_fig.update_layout(
+                    showlegend=False,
+                    margin=dict(l=10, r=10, t=50, b=10),
+                    height=VERTICAL_CHART_HEIGHT,
+                    uniformtext_minsize=10,
+                    uniformtext_mode="hide",
+                )
+                st.plotly_chart(pie_fig, use_container_width=True)
     with tabs[5]:
         brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
         col1, col2 = st.columns(2)
