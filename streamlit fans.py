@@ -845,12 +845,16 @@ def main():
         section[data-testid="stSidebar"] {
             background: #ffffff;
             border-right: 1px solid #eeeeee;
+            width: 190px !important;
+            min-width: 190px !important;
+            max-width: 190px !important;
         }
         section[data-testid="stSidebar"] > div {
             padding-top: 1.25rem;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            width: 190px !important;
         }
         .sidebar-brand {
             display: flex;
