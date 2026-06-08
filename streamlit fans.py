@@ -1,3 +1,4 @@
+import base64
 import json
 import math
 import re
@@ -14,6 +15,7 @@ from wordcloud import WordCloud
 BASE_DIR = Path(__file__).resolve().parent
 DATA_PATH = BASE_DIR / "data" / "fan_survey_dashboard.xlsx"
 RO_GEOJSON_PATH = BASE_DIR / "romania.geojson"
+LOGO_PATH = BASE_DIR / "data" / "img" / "dinamo-data-analysis-red.ico"
 
 DINAMO_RED = "#e30613"
 DARK_RED = "#9d0208"
@@ -44,6 +46,10 @@ VERTICAL_CHART_HEIGHT = 460
 MAP_CHART_HEIGHT = 600
 TREEMAP_CHART_HEIGHT = 600
 BAR_CHART_WIDTH = 900
+
+
+def image_data_uri(path: Path, mime_type: str) -> str:
+    return f"data:{mime_type};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
 
 
 def horizontal_chart_height(row_count: int, minimum: int = 420, per_row: int = 34, maximum: int = 900) -> int:
@@ -836,6 +842,69 @@ def main():
         .stApp { background: white; color: #111111; }
         h1, h2, h3 { color: #111111; }
         [data-testid="stMetricValue"] { color: #e30613; }
+        section[data-testid="stSidebar"] {
+            background: #ffffff;
+            border-right: 1px solid #eeeeee;
+        }
+        section[data-testid="stSidebar"] > div {
+            padding-top: 1.25rem;
+        }
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.25rem 0.1rem 1.05rem;
+            margin-bottom: 0.85rem;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .sidebar-brand img {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            flex: 0 0 auto;
+        }
+        .sidebar-brand-title {
+            color: #111111;
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.1;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] label {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.62rem 0.78rem;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #111111;
+            transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+            background: #fff1f2;
+            border-color: #f3a3a8;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+            background: #e30613;
+            border-color: #e30613;
+            color: #ffffff;
+            box-shadow: 0 8px 18px rgba(227, 6, 19, 0.18);
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) * {
+            color: #ffffff !important;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child {
+            display: none;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] p {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -843,7 +912,16 @@ def main():
     df, _ = load_workbook(DATA_PATH)
     df = prepare_data(df)
 
-    st.sidebar.title("Menu")
+    logo_uri = image_data_uri(LOGO_PATH, "image/x-icon")
+    st.sidebar.markdown(
+        f"""
+        <div class="sidebar-brand">
+            <img src="{logo_uri}" alt="Dinamo Data Analysis logo">
+            <div class="sidebar-brand-title">Fan Analytics</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     menu = st.sidebar.radio(
         "Dashboard section",
         ["Demographics", "Sentiment", "Club"],
