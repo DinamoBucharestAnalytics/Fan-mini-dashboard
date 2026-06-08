@@ -594,8 +594,8 @@ def word_cloud(df: pd.DataFrame):
     plt.close(fig)
 
 
-def ordered_likert_chart(df: pd.DataFrame, col: str, title: str, order: list[str]):
-    bar_count(df, col, title, order=order)
+def ordered_likert_chart(df: pd.DataFrame, col: str, title: str, order: list[str], fixed_width: bool = True):
+    bar_count(df, col, title, order=order, fixed_width=fixed_width)
 
 
 def demographics(df: pd.DataFrame):
@@ -678,12 +678,18 @@ def sentiment(df: pd.DataFrame):
         c2.metric("Median", f"{score.median():.0f}" if score.notna().any() else "N/A")
         ordered_likert_chart(df, "Cât de conectat te simți emoțional cu Dinamo?", "Emotional connection", ["1", "2", "3", "4", "5"])
     with tabs[1]:
-        ordered_likert_chart(
-            df,
-            "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?",
-            "Off-field evaluation",
-            ["În regres vizibil", "În ușor regres", "Stabil", "În ușoară creștere", "În creștere vizibilă", "Nu am o părere formată"],
-        )
+        off_field_order = ["În regres vizibil", "În ușor regres", "Stabil", "În ușoară creștere", "În creștere vizibilă", "Nu am o părere formată"]
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(
+                df,
+                "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?",
+                "Off-field evaluation",
+                off_field_order,
+                fixed_width=False,
+            )
+        with col2:
+            pie_count(df, "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?", "Off-field evaluation share", order=off_field_order)
     with tabs[2]:
         bar_count(df, "Dinamo un cuvânt - categorie", "One-word emotion categories", horizontal=True)
         top_bar(df, "Dinamo un cuvânt - normalizat", "Top normalized words/phrases", n=25)
@@ -707,12 +713,18 @@ def club(df: pd.DataFrame):
         "Suggestions",
     ])
     with tabs[0]:
-        ordered_likert_chart(
-            df,
-            "De cât timp ești suporter Dinamo?",
-            "Supporter tenure",
-            ["Am început recent", "De câțiva ani", "De peste 10 ani", "De mic, am crescut cu Dinamo"],
-        )
+        supporter_tenure_order = ["Am început recent", "De câțiva ani", "De peste 10 ani", "De mic, am crescut cu Dinamo"]
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(
+                df,
+                "De cât timp ești suporter Dinamo?",
+                "Supporter tenure",
+                supporter_tenure_order,
+                fixed_width=False,
+            )
+        with col2:
+            pie_count(df, "De cât timp ești suporter Dinamo?", "Supporter tenure share", order=supporter_tenure_order)
     with tabs[1]:
         bar_count(df, "Ce face Dinamo BINE - categorie", "What Dinamo does well", horizontal=True)
     with tabs[2]:
@@ -774,9 +786,19 @@ def club(df: pd.DataFrame):
             )
             render_bar_chart(fig)
     with tabs[5]:
-        ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", ["Deloc", "Puțin", "Destul de mult", "Foarte mult"])
+        brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", brand_order, fixed_width=False)
+        with col2:
+            pie_count(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity share", order=brand_order)
     with tabs[6]:
-        ordered_likert_chart(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift", ["Deloc", "Puțin", "Destul de mult", "Foarte mult"])
+        brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift", brand_order, fixed_width=False)
+        with col2:
+            pie_count(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift share", order=brand_order)
     with tabs[7]:
         bar_count(df, "Sugestie suplimentară - categorie", "Suggestions", horizontal=True)
 
