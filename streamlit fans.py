@@ -683,24 +683,30 @@ def logo_sentiment_counts(df: pd.DataFrame) -> pd.DataFrame:
 
 def romania_county_map(df: pd.DataFrame):
     geojson = load_geojson(RO_GEOJSON_PATH)
+    county_rows = []
     lookup = {}
     for feature in geojson.get("features", []):
         name = feature.get("properties", {}).get("name", "")
         lookup[normalize_text(name)] = name
+        county_rows.append({"geojson_name": name, "map_county": name})
 
     counts = percent_count(df, "Județ atribuit")
-    if counts.empty:
-        st.info("No county data for the current filters.")
-        return
-    counts["geojson_name"] = counts["Județ atribuit"].map(lambda x: lookup.get(normalize_text(x)))
-    mappable = counts[counts["geojson_name"].notna()].copy()
-    if mappable.empty:
-        st.info("No counties matched the Romania map.")
-        return
-    mappable["share"] = mappable["count"] / mappable["count"].sum()
-    mappable["color_value"] = mappable["count"].map(lambda value: math.log10(value + 1))
+    base = pd.DataFrame(county_rows)
+    if not counts.empty:
+        counts["geojson_name"] = counts["Județ atribuit"].map(lambda x: lookup.get(normalize_text(x)))
+        counts = counts[counts["geojson_name"].notna()].copy()
+        base = base.merge(counts[["geojson_name", "Județ atribuit", "count"]], on="geojson_name", how="left")
+    else:
+        base["Județ atribuit"] = None
+        base["count"] = 0
+    base["Județ atribuit"] = base["Județ atribuit"].fillna(base["map_county"])
+    base["count"] = base["count"].fillna(0).astype(int)
+    total = base["count"].sum()
+    base["share"] = base["count"] / total if total else 0
+    base["color_value"] = base["count"].map(lambda value: math.log10(value + 1))
+    max_color = float(base["color_value"].max())
     fig = px.choropleth(
-        mappable,
+        base,
         geojson=geojson,
         locations="geojson_name",
         featureidkey="properties.name",
@@ -708,8 +714,10 @@ def romania_county_map(df: pd.DataFrame):
         hover_name="Județ atribuit",
         hover_data={"count": True, "share": ":.1%", "color_value": False, "geojson_name": False},
         color_continuous_scale=RED_SCALE,
+        range_color=(0, max_color if max_color > 0 else 1),
         title="Respondents by county",
     )
+    fig.update_traces(marker_line_color="#b8b8b8", marker_line_width=0.6)
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
@@ -736,7 +744,18 @@ def world_country_map(df: pd.DataFrame):
         color_continuous_scale=RED_SCALE,
         title="Respondents by country",
     )
-    fig.update_geos(showcoastlines=True, showcountries=True, lonaxis_range=(-170, 45), lataxis_range=(10, 75))
+    fig.update_geos(
+        showcoastlines=True,
+        coastlinecolor="#b8b8b8",
+        showcountries=True,
+        countrycolor="#b8b8b8",
+        showland=True,
+        landcolor="#f7f7f7",
+        showocean=True,
+        oceancolor="#ffffff",
+        lonaxis_range=(-170, 45),
+        lataxis_range=(10, 75),
+    )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
 
@@ -810,29 +829,46 @@ def social_world_map(df: pd.DataFrame, platform: str):
         color_continuous_scale=RED_SCALE,
         title=f"Followers by country - {platform}",
     )
-    fig.update_geos(showcoastlines=True, showcountries=True, lonaxis_range=(-170, 45), lataxis_range=(10, 75))
+    fig.update_geos(
+        showcoastlines=True,
+        coastlinecolor="#b8b8b8",
+        showcountries=True,
+        countrycolor="#b8b8b8",
+        showland=True,
+        landcolor="#f7f7f7",
+        showocean=True,
+        oceancolor="#ffffff",
+        lonaxis_range=(-170, 45),
+        lataxis_range=(10, 75),
+    )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log followers")
     st.plotly_chart(fig, use_container_width=True)
 
 
 def social_county_map(df: pd.DataFrame, platform: str):
     geojson = load_geojson(RO_GEOJSON_PATH)
-    lookup = {
-        normalize_text(feature.get("properties", {}).get("name", "")): feature.get("properties", {}).get("name", "")
-        for feature in geojson.get("features", [])
-    }
+    county_rows = []
+    lookup = {}
+    for feature in geojson.get("features", []):
+        name = feature.get("properties", {}).get("name", "")
+        lookup[normalize_text(name)] = name
+        county_rows.append({"geojson_name": name, "county_norm": name})
     data = social_platform_geo(df, platform, "county")
-    if data.empty:
-        st.info("No county or region data for this source.")
-        return
-    data["geojson_name"] = data["county_norm"].map(lambda value: lookup.get(normalize_text(value)))
-    mappable = data[data["geojson_name"].notna()].copy()
-    if mappable.empty:
-        st.info("No counties matched the Romania map.")
-        return
-    mappable["color_value"] = mappable["followers"].map(lambda value: math.log10(value + 1))
+    base = pd.DataFrame(county_rows)
+    if not data.empty:
+        data["geojson_name"] = data["county_norm"].map(lambda value: lookup.get(normalize_text(value)))
+        mappable = data[data["geojson_name"].notna()].copy()
+        base = base.merge(mappable[["geojson_name", "followers", "percentage"]], on="geojson_name", how="left")
+    else:
+        data["geojson_name"] = None
+        base["followers"] = 0
+        base["percentage"] = 0
+    base["followers"] = base["followers"].fillna(0)
+    base["percentage"] = base["percentage"].fillna(0)
+    base["color_value"] = base["followers"].map(lambda value: math.log10(value + 1))
+    max_color = float(base["color_value"].max())
     fig = px.choropleth(
-        mappable,
+        base,
         geojson=geojson,
         locations="geojson_name",
         featureidkey="properties.name",
@@ -840,8 +876,10 @@ def social_county_map(df: pd.DataFrame, platform: str):
         hover_name="county_norm",
         hover_data={"followers": ":,.0f", "percentage": ":.1%", "color_value": False, "geojson_name": False},
         color_continuous_scale=RED_SCALE,
+        range_color=(0, max_color if max_color > 0 else 1),
         title=f"Followers by county/region - {platform}",
     )
+    fig.update_traces(marker_line_color="#b8b8b8", marker_line_width=0.6)
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log followers")
     st.plotly_chart(fig, use_container_width=True)
@@ -987,8 +1025,8 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         st.plotly_chart(fig, use_container_width=True)
 
 
-def platform_demographics(demo_df: pd.DataFrame, platform: str):
-    tabs = st.tabs(["Age", "Sex"])
+def platform_demographics(demo_df: pd.DataFrame, geo_df: pd.DataFrame, platform: str):
+    tabs = st.tabs(["Age", "Sex", "Countries", "Counties/Regions"])
     with tabs[0]:
         if social_age_data(demo_df, platform).empty:
             st.info(f"No age demographic data available for {platform}.")
@@ -1003,6 +1041,14 @@ def platform_demographics(demo_df: pd.DataFrame, platform: str):
             st.info(f"No sex demographic data available for {platform}.")
         else:
             social_sex_charts(demo_df, platform)
+    with tabs[2]:
+        social_world_map(geo_df, platform)
+        social_top_bar(social_country_data(geo_df, platform), "country_norm", "Top countries")
+    with tabs[3]:
+        _, map_col, _ = st.columns([1, 2, 1])
+        with map_col:
+            social_county_map(geo_df, platform)
+        social_top_bar(social_platform_geo(geo_df, platform, "county"), "county_norm", "Top counties/regions")
 
 
 def platform_club(geo_df: pd.DataFrame, platform: str):
@@ -1446,7 +1492,7 @@ def main():
         st.title("Dinamo Fan Analytics")
         st.subheader(f"{source} - {menu}")
         if menu == "Demographics":
-            platform_demographics(demo_df, source)
+            platform_demographics(demo_df, geo_df, source)
         else:
             platform_club(geo_df, source)
 
