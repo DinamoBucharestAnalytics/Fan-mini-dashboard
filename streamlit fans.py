@@ -306,12 +306,12 @@ def bar_count(
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
     chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
+    axis_tickformat = {"xaxis_tickformat": ".0%"} if horizontal else {"yaxis_tickformat": ".0%"}
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=chart_height,
-        xaxis_tickformat=".0%",
-        yaxis_tickformat=".0%",
+        **axis_tickformat,
     )
     if fixed_width:
         render_bar_chart(fig)
@@ -452,12 +452,12 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
     chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
+    axis_tickformat = {"xaxis_tickformat": ".0%"} if horizontal else {"yaxis_tickformat": ".0%"}
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=chart_height,
-        xaxis_tickformat=".0%",
-        yaxis_tickformat=".0%",
+        **axis_tickformat,
     )
     if fixed_width:
         render_bar_chart(fig)
