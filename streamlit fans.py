@@ -876,11 +876,18 @@ def main():
             line-height: 1.1;
             text-align: center;
         }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
         section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 0.5rem;
+            width: 148px;
+            margin: 0 auto;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] label {
             width: 148px;
