@@ -1478,7 +1478,7 @@ def main():
         }
         section[data-testid="stSidebar"] [data-testid="stSelectbox"] {
             width: 148px;
-            margin: 0 auto 1rem;
+            margin: 1rem auto 1rem;
         }
         section[data-testid="stSidebar"] [data-testid="stSelectbox"] p {
             font-weight: 700;
@@ -1488,13 +1488,21 @@ def main():
         """,
         unsafe_allow_html=True,
     )
-    source = st.sidebar.selectbox("Source", SOURCE_OPTIONS, index=0)
-    menu_options = SURVEY_MENUS if source == SURVEY_SOURCE else PLATFORM_MENUS
+    current_source = st.session_state.get("source_selector", SURVEY_SOURCE)
+    if current_source not in SOURCE_OPTIONS:
+        current_source = SURVEY_SOURCE
+    menu_options = SURVEY_MENUS if current_source == SURVEY_SOURCE else PLATFORM_MENUS
 
     menu = st.sidebar.radio(
         "Dashboard section",
         menu_options,
         label_visibility="collapsed",
+    )
+    source = st.sidebar.selectbox(
+        "Source",
+        SOURCE_OPTIONS,
+        index=SOURCE_OPTIONS.index(current_source),
+        key="source_selector",
     )
     logo_uri = image_data_uri(LOGO_PATH, "image/x-icon")
     st.sidebar.markdown(
