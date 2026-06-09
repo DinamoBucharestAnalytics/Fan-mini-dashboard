@@ -782,11 +782,19 @@ def social_country_data(df: pd.DataFrame, platform: str) -> pd.DataFrame:
 
 
 def social_metric_label(platform: str) -> str:
-    return "RON spent" if platform == "Merchandise" else "Followers"
+    if platform == "Merchandise":
+        return "RON spent"
+    if platform == "Fan Youtube (RD1948)":
+        return "Views"
+    return "Followers"
 
 
 def social_log_metric_label(platform: str) -> str:
-    return "Log RON spent" if platform == "Merchandise" else "Log followers"
+    if platform == "Merchandise":
+        return "Log RON spent"
+    if platform == "Fan Youtube (RD1948)":
+        return "Log views"
+    return "Log followers"
 
 
 def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
@@ -930,6 +938,7 @@ def social_age_bar(demo_df: pd.DataFrame, platform: str):
     if data.empty:
         st.info(f"No age demographic data available for {platform}.")
         return
+    metric_label = social_metric_label(platform)
     data["percentage_label"] = data["pct_on_platform"].map(lambda value: f"{value:.1%}")
     fig = px.bar(
         data,
@@ -942,7 +951,7 @@ def social_age_bar(demo_df: pd.DataFrame, platform: str):
     fig.update_traces(
         marker_color=DINAMO_RED,
         textposition="outside",
-        hovertemplate="%{x}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate=f"%{{x}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
     )
     fig.update_layout(
         showlegend=False,
@@ -960,6 +969,7 @@ def social_age_pie(demo_df: pd.DataFrame, platform: str):
     if data.empty:
         st.info(f"No age demographic data available for {platform}.")
         return
+    metric_label = social_metric_label(platform)
     fig = px.pie(
         data,
         names="age",
@@ -971,7 +981,7 @@ def social_age_pie(demo_df: pd.DataFrame, platform: str):
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
         marker=dict(line=dict(color="white", width=1)),
         automargin=True,
     )
@@ -1005,6 +1015,7 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
     if data.empty or data["followers"].sum() <= 0:
         st.info(f"No sex demographic data available for {platform}.")
         return
+    metric_label = social_metric_label(platform)
     col1, col2 = st.columns(2)
     with col1:
         fig = px.pie(
@@ -1019,7 +1030,7 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         )
         fig.update_traces(
             textinfo="label+percent",
-            hovertemplate="%{label}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+            hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
         )
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
         st.plotly_chart(fig, use_container_width=True)
@@ -1036,7 +1047,7 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         fig.update_traces(
             marker_color=[DINAMO_RED, "#dddddd"],
             textposition="outside",
-            hovertemplate="%{x}<br>Followers: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+            hovertemplate=f"%{{x}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
         )
         fig.update_layout(
             showlegend=False,
