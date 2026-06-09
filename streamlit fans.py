@@ -1049,29 +1049,44 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
 
 
 def platform_demographics(demo_df: pd.DataFrame, geo_df: pd.DataFrame, platform: str):
-    tabs = st.tabs(["Age", "Sex", "Countries", "Counties/Regions"])
-    with tabs[0]:
-        if social_age_data(demo_df, platform).empty:
-            st.info(f"No age demographic data available for {platform}.")
-        else:
-            col1, col2 = st.columns(2)
-            with col1:
-                social_age_bar(demo_df, platform)
-            with col2:
-                social_age_pie(demo_df, platform)
-    with tabs[1]:
-        if social_sex_data(demo_df, platform).empty:
-            st.info(f"No sex demographic data available for {platform}.")
-        else:
-            social_sex_charts(demo_df, platform)
-    with tabs[2]:
-        social_world_map(geo_df, platform)
-        social_top_bar(social_country_data(geo_df, platform), "country_norm", "Top countries")
-    with tabs[3]:
-        _, map_col, _ = st.columns([1, 2, 1])
-        with map_col:
-            social_county_map(geo_df, platform)
-        social_top_bar(social_platform_geo(geo_df, platform, "county"), "county_norm", "Top counties/regions")
+    age_data = social_age_data(demo_df, platform)
+    sex_data = social_sex_data(demo_df, platform)
+    country_data = social_country_data(geo_df, platform)
+    county_data = social_platform_geo(geo_df, platform, "county")
+
+    tab_specs = []
+    if not age_data.empty and age_data["total_in_age"].sum() > 0:
+        tab_specs.append(("Age", "age"))
+    if not sex_data.empty and sex_data["followers"].sum() > 0:
+        tab_specs.append(("Sex", "sex"))
+    if not country_data.empty and country_data["followers"].sum() > 0:
+        tab_specs.append(("Countries", "countries"))
+    if not county_data.empty and county_data["followers"].sum() > 0:
+        tab_specs.append(("Counties/Regions", "counties"))
+
+    if not tab_specs:
+        st.info(f"No demographic data available for {platform}.")
+        return
+
+    tabs = st.tabs([label for label, _ in tab_specs])
+    for tab, (_, key) in zip(tabs, tab_specs):
+        with tab:
+            if key == "age":
+                col1, col2 = st.columns(2)
+                with col1:
+                    social_age_bar(demo_df, platform)
+                with col2:
+                    social_age_pie(demo_df, platform)
+            elif key == "sex":
+                social_sex_charts(demo_df, platform)
+            elif key == "countries":
+                social_world_map(geo_df, platform)
+                social_top_bar(country_data, "country_norm", "Top countries")
+            elif key == "counties":
+                _, map_col, _ = st.columns([1, 2, 1])
+                with map_col:
+                    social_county_map(geo_df, platform)
+                social_top_bar(county_data, "county_norm", "Top counties/regions")
 
 
 def platform_club(geo_df: pd.DataFrame, platform: str):
