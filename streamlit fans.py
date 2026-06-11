@@ -34,7 +34,7 @@ PLATFORM_MENUS = ["Demographics"]
 CUSTOM_ANALYSIS_SHEETS = {
     f"col_{idx}_{suffix}"
     for idx in range(1, 5)
-    for suffix in ["keywords", "topics", "classified", "classified_RESULTS"]
+    for suffix in ["keywords", "bigrams", "topics", "classified", "classified_RESULTS"]
 }
 
 DINAMO_RED = "#e30613"
@@ -745,6 +745,57 @@ def keyword_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFra
     return out.sort_values("frequency agregat", ascending=False).reset_index(drop=True)
 
 
+def bigram_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
+    sheet = summaries.get(f"{prefix}_bigrams", pd.DataFrame())
+    if sheet.empty:
+        return pd.DataFrame(columns=["bigram", "count", "percentage"])
+    term_col = "term" if "term" in sheet.columns else sheet.columns[0]
+    count_col = "frequency" if "frequency" in sheet.columns else sheet.columns[1]
+    out = sheet[[term_col, count_col]].copy()
+    out.columns = ["bigram", "count"]
+    out["bigram"] = out["bigram"].fillna("").astype(str).str.strip()
+    out["count"] = out["count"].map(analysis_count)
+    out = out[out["bigram"].ne("") & out["count"].gt(0)]
+    out = out.groupby("bigram", as_index=False)["count"].sum()
+    total = out["count"].sum()
+    out["percentage"] = out["count"] / total if total else 0
+    return out.sort_values("count", ascending=False).reset_index(drop=True)
+
+
+def bigram_theme_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
+    sheet = summaries.get(f"{prefix}_bigrams", pd.DataFrame())
+    empty = pd.DataFrame(columns=["theme", "subthemes", "count", "percentage"])
+    if sheet.empty:
+        return empty
+
+    if "Tema principală" in sheet.columns and "Total mențiuni" in sheet.columns:
+        out = sheet[["Tema principală", "Sub-teme incluse", "Total mențiuni"]].copy()
+        out.columns = ["theme", "subthemes", "count"]
+        out["subthemes"] = out["subthemes"].fillna("").astype(str).str.strip()
+    else:
+        theme_col = "Topic Definition.1" if "Topic Definition.1" in sheet.columns else None
+        count_col = "Responses.1" if "Responses.1" in sheet.columns else None
+        if not theme_col or not count_col:
+            return empty
+        cols = [theme_col, count_col]
+        pct_col = "% din teme identificate" if "% din teme identificate" in sheet.columns else None
+        if pct_col:
+            cols.append(pct_col)
+        out = sheet[cols].copy()
+        out.columns = ["theme", "count"] + (["percentage"] if pct_col else [])
+        out["subthemes"] = ""
+
+    out["theme"] = out["theme"].fillna("").astype(str).str.strip()
+    out["count"] = out["count"].map(analysis_count)
+    if "percentage" in out.columns:
+        out["percentage"] = out["percentage"].map(analysis_percentage)
+    else:
+        total = out["count"].sum()
+        out["percentage"] = out["count"] / total if total else 0
+    out = out[out["theme"].ne("") & out["count"].gt(0)]
+    return out[["theme", "subthemes", "count", "percentage"]].sort_values("count", ascending=False).reset_index(drop=True)
+
+
 def topic_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
     sheet = summaries.get(f"{prefix}_topics", pd.DataFrame())
     if sheet.empty:
@@ -871,7 +922,7 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
 
 
 def open_answer_analysis(summaries: dict[str, pd.DataFrame], prefix: str, title: str):
-    required = [f"{prefix}_{suffix}" for suffix in ["keywords", "topics", "classified", "classified_RESULTS"]]
+    required = [f"{prefix}_{suffix}" for suffix in ["keywords", "bigrams", "topics", "classified", "classified_RESULTS"]]
     missing = [sheet for sheet in required if sheet not in summaries]
     if missing:
         st.error(
@@ -892,6 +943,21 @@ def open_answer_analysis(summaries: dict[str, pd.DataFrame], prefix: str, title:
             st.dataframe(keywords, use_container_width=True, hide_index=True)
     with right:
         analysis_text_box(extract_analysis_explanation(keyword_sheet))
+
+    bigrams = bigram_table(summaries, prefix)
+    bigram_themes = bigram_theme_table(summaries, prefix)
+    bigram_sheet = summaries.get(f"{prefix}_bigrams", pd.DataFrame())
+    st.markdown("#### Bigram signals")
+    left, right = st.columns([2, 1])
+    with left:
+        analysis_count_bar(bigrams, "bigram", "count", "Top bigrams", top_n=20)
+        with st.expander("Bigram table", expanded=False):
+            st.dataframe(bigrams, use_container_width=True, hide_index=True)
+        if not bigram_themes.empty:
+            with st.expander("Bigram theme aggregation table", expanded=False):
+                st.dataframe(bigram_themes, use_container_width=True, hide_index=True)
+    with right:
+        analysis_text_box(extract_analysis_explanation(bigram_sheet))
 
     topics = topic_table(summaries, prefix)
     topic_sheet = summaries.get(f"{prefix}_topics", pd.DataFrame())
