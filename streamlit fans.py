@@ -1497,9 +1497,7 @@ def platform_demographics(demo_df: pd.DataFrame, geo_df: pd.DataFrame, platform:
                 social_world_map(geo_df, platform)
                 social_top_bar(country_data, "country_norm", "Top countries")
             elif key == "counties":
-                _, map_col, _ = st.columns([1, 2, 1])
-                with map_col:
-                    social_county_map(geo_df, platform)
+                social_county_map(geo_df, platform)
                 social_top_bar(county_data, "county_norm", "Top counties/regions")
 
 
@@ -1509,9 +1507,7 @@ def platform_club(geo_df: pd.DataFrame, platform: str):
         social_world_map(geo_df, platform)
         social_top_bar(social_country_data(geo_df, platform), "country_norm", "Top countries")
     with tabs[1]:
-        _, map_col, _ = st.columns([1, 2, 1])
-        with map_col:
-            social_county_map(geo_df, platform)
+        social_county_map(geo_df, platform)
         social_top_bar(social_platform_geo(geo_df, platform, "county"), "county_norm", "Top counties/regions")
 
 
@@ -1588,9 +1584,7 @@ def demographics(df: pd.DataFrame):
         with col2:
             pie_count(df, "Gen", "Gender share")
     with tabs[2]:
-        _, map_col, _ = st.columns([1, 2, 1])
-        with map_col:
-            romania_county_map(df)
+        romania_county_map(df)
         col1, col2 = st.columns(2)
         with col1:
             top_bar(df, "Județ atribuit", "Top counties")
