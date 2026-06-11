@@ -709,10 +709,10 @@ def analysis_percentage(value: object) -> float:
     return number / 100 if has_percent or number > 1 else number
 
 
-def extract_analysis_explanation(sheet: pd.DataFrame) -> str:
+def extract_analysis_explanation(sheet: pd.DataFrame, include_named_columns: bool = False) -> str:
     texts = []
     for col in sheet.columns:
-        if not str(col).startswith("Unnamed"):
+        if not include_named_columns and not str(col).startswith("Unnamed"):
             continue
         for value in sheet[col].dropna():
             text = str(value).strip()
@@ -913,7 +913,7 @@ def open_answer_analysis(summaries: dict[str, pd.DataFrame], prefix: str, title:
     with chart_col2:
         analysis_percentage_bar(tone_table, "label", "Tone")
     with text_col:
-        analysis_text_box(extract_analysis_explanation(results_sheet))
+        analysis_text_box(extract_analysis_explanation(results_sheet, include_named_columns=True))
 
     classified = classified_table(summaries, prefix)
     with st.expander("Raw classified answers", expanded=False):
