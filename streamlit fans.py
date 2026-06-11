@@ -42,6 +42,30 @@ DARK_RED = "#9d0208"
 BLACK = "#111111"
 GREY = "#666666"
 LIGHT_GREY = "#f5f5f5"
+LIGHT_THEME = {
+    "bg": "#ffffff",
+    "surface": "#ffffff",
+    "text": "#111111",
+    "muted": "#666666",
+    "border": "#eeeeee",
+    "neutral": "#dddddd",
+    "map_line": "#b8b8b8",
+    "map_land": "#f7f7f7",
+    "map_ocean": "#ffffff",
+    "plot_template": "plotly_white",
+}
+DARK_THEME = {
+    "bg": "#0b0d12",
+    "surface": "#111318",
+    "text": "#f5f7fa",
+    "muted": "#a8adb8",
+    "border": "#2b3038",
+    "neutral": "#5b626e",
+    "map_line": "#4b5563",
+    "map_land": "#191d24",
+    "map_ocean": "#0b0d12",
+    "plot_template": "plotly_dark",
+}
 RED_SCALE = [
     (0.0, "#fff5f5"),
     (0.2, "#ffd6d6"),
@@ -68,6 +92,50 @@ TREEMAP_CHART_HEIGHT = 600
 BAR_CHART_WIDTH = 900
 HORIZONTAL_BAR_DISPLAY_SCALE = 0.90
 HORIZONTAL_BAR_DISPLAY_COL = "_bar_display_value"
+
+
+def current_theme_type() -> str | None:
+    try:
+        theme_type = st.context.theme.get("type")
+    except Exception:
+        theme_type = None
+    return theme_type if theme_type in {"light", "dark"} else None
+
+
+def active_theme() -> dict[str, str]:
+    return DARK_THEME if current_theme_type() == "dark" else LIGHT_THEME
+
+
+def theme_color(name: str) -> str:
+    return active_theme()[name]
+
+
+def pie_palette() -> list[str]:
+    if current_theme_type() == "dark":
+        return [
+            DINAMO_RED,
+            "#ff4d57",
+            "#ff7a82",
+            "#ffadb3",
+            "#f3f4f6",
+            "#d1d5db",
+            "#9ca3af",
+            "#6b7280",
+            "#4b5563",
+        ]
+    return PIE_COLORS
+
+
+def donut_palette() -> list[str]:
+    if current_theme_type() == "dark":
+        return [DINAMO_RED, theme_color("neutral"), "#d1d5db", "#ff7a82"]
+    return [DINAMO_RED, BLACK, "#bbbbbb", DARK_RED]
+
+
+def configure_chart_theme():
+    theme_type = current_theme_type()
+    if theme_type:
+        px.defaults.template = active_theme()["plot_template"]
 
 
 def image_data_uri(path: Path, mime_type: str) -> str:
@@ -481,7 +549,7 @@ def donut(df: pd.DataFrame, col: str, title: str):
         values="count",
         hole=0.55,
         title=title,
-        color_discrete_sequence=[DINAMO_RED, BLACK, "#bbbbbb", DARK_RED],
+        color_discrete_sequence=donut_palette(),
     )
     fig.update_traces(textinfo="percent+label")
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
@@ -512,14 +580,14 @@ def pie_count(
         names=col,
         values="count",
         title=title,
-        color_discrete_sequence=PIE_COLORS,
+        color_discrete_sequence=pie_palette(),
         custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
         hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
-        marker=dict(line=dict(color="white", width=1)),
+        marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
     fig.update_layout(
@@ -554,14 +622,14 @@ def country_romania_other_pie(df: pd.DataFrame):
         values="count",
         title="România vs Others",
         color="Country group",
-        color_discrete_map={"România": DINAMO_RED, "Others": "#dddddd"},
+        color_discrete_map={"România": DINAMO_RED, "Others": theme_color("neutral")},
         custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
         hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
-        marker=dict(line=dict(color="white", width=1)),
+        marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
     fig.update_layout(
@@ -589,14 +657,14 @@ def other_countries_pie(df: pd.DataFrame):
         names="country_norm",
         values="count",
         title="Top 10 other countries",
-        color_discrete_sequence=PIE_COLORS,
+        color_discrete_sequence=pie_palette(),
         custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
         hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
-        marker=dict(line=dict(color="white", width=1)),
+        marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
     fig.update_layout(
@@ -1120,7 +1188,7 @@ def romania_county_map(df: pd.DataFrame):
         range_color=(0, max_color if max_color > 0 else 1),
         title="Respondents by county",
     )
-    fig.update_traces(marker_line_color="#b8b8b8", marker_line_width=0.6)
+    fig.update_traces(marker_line_color=theme_color("map_line"), marker_line_width=0.6)
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=MAP_CHART_HEIGHT, coloraxis_colorbar_title="Log respondents")
     st.plotly_chart(fig, use_container_width=True)
@@ -1149,13 +1217,13 @@ def world_country_map(df: pd.DataFrame):
     )
     fig.update_geos(
         showcoastlines=True,
-        coastlinecolor="#b8b8b8",
+        coastlinecolor=theme_color("map_line"),
         showcountries=True,
-        countrycolor="#b8b8b8",
+        countrycolor=theme_color("map_line"),
         showland=True,
-        landcolor="#f7f7f7",
+        landcolor=theme_color("map_land"),
         showocean=True,
-        oceancolor="#ffffff",
+        oceancolor=theme_color("map_ocean"),
         lonaxis_range=(-170, 45),
         lataxis_range=(10, 75),
     )
@@ -1259,13 +1327,13 @@ def social_world_map(df: pd.DataFrame, platform: str):
     )
     fig.update_geos(
         showcoastlines=True,
-        coastlinecolor="#b8b8b8",
+        coastlinecolor=theme_color("map_line"),
         showcountries=True,
-        countrycolor="#b8b8b8",
+        countrycolor=theme_color("map_line"),
         showland=True,
-        landcolor="#f7f7f7",
+        landcolor=theme_color("map_land"),
         showocean=True,
-        oceancolor="#ffffff",
+        oceancolor=theme_color("map_ocean"),
         lonaxis_range=(-170, 45),
         lataxis_range=(10, 75),
     )
@@ -1311,7 +1379,7 @@ def social_county_map(df: pd.DataFrame, platform: str):
     )
     fig.update_traces(
         hovertemplate=f"<b>%{{hovertext}}</b><br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
-        marker_line_color="#b8b8b8",
+        marker_line_color=theme_color("map_line"),
         marker_line_width=0.6,
     )
     fig.update_geos(fitbounds="locations", visible=False)
@@ -1378,14 +1446,14 @@ def social_age_pie(demo_df: pd.DataFrame, platform: str):
         names="age",
         values="total_in_age",
         title=f"Age share - {platform}",
-        color_discrete_sequence=PIE_COLORS,
+        color_discrete_sequence=pie_palette(),
         custom_data=["total_in_age", "pct_on_platform"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
         hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
-        marker=dict(line=dict(color="white", width=1)),
+        marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
     fig.update_layout(
@@ -1429,7 +1497,7 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         custom_data=["followers", "percentage"],
     )
     fig.update_traces(
-        marker_color=[DINAMO_RED, "#dddddd"],
+        marker_color=[DINAMO_RED, theme_color("neutral")],
         textposition="outside",
         hovertemplate=f"%{{x}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
     )
@@ -1449,7 +1517,7 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         hole=0.55,
         title=f"Sex distribution - {platform}",
         color="Sex",
-        color_discrete_map={"Men": DINAMO_RED, "Women": "#dddddd"},
+        color_discrete_map={"Men": DINAMO_RED, "Women": theme_color("neutral")},
         custom_data=["followers", "percentage"],
     )
     fig.update_traces(
@@ -1538,7 +1606,7 @@ def word_cloud(df: pd.DataFrame):
     wc = WordCloud(
         width=1400,
         height=800,
-        background_color="white",
+        background_color=theme_color("surface"),
         colormap="Reds",
         prefer_horizontal=0.95,
         max_words=250,
@@ -1687,7 +1755,7 @@ def club(df: pd.DataFrame):
                 hole=0.55,
                 title="Logo mentioned, % of all respondents",
                 color="Siglă menționată",
-                color_discrete_map={"Da": DINAMO_RED, "Nu": "#dddddd"},
+                color_discrete_map={"Da": DINAMO_RED, "Nu": theme_color("neutral")},
                 custom_data=["count", "percentage"],
             )
             fig.update_traces(
@@ -1737,14 +1805,14 @@ def club(df: pd.DataFrame):
                 names="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
                 values="count",
                 title="Season ticket drivers share",
-                color_discrete_sequence=PIE_COLORS,
+                color_discrete_sequence=pie_palette(),
                 custom_data=["count", "percentage"],
             )
             pie_fig.update_traces(
                 textinfo="label+percent",
                 textposition="outside",
                 hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
-                marker=dict(line=dict(color="white", width=1)),
+                marker=dict(line=dict(color=theme_color("surface"), width=1)),
                 automargin=True,
             )
             pie_fig.update_layout(
@@ -1766,15 +1834,43 @@ def club(df: pd.DataFrame):
 
 
 def main():
+    configure_chart_theme()
     st.markdown(
         """
         <style>
-        .stApp { background: white; color: #111111; }
-        h1, h2, h3 { color: #111111; }
+        :root {
+            color-scheme: light dark;
+            --app-bg: #ffffff;
+            --app-surface: #ffffff;
+            --app-surface-alt: #fff1f2;
+            --app-text: #111111;
+            --app-muted: #666666;
+            --app-border: #eeeeee;
+            --app-border-strong: #e5e5e5;
+            --app-hover-border: #f3a3a8;
+            --app-shadow-red: rgba(227, 6, 19, 0.18);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --app-bg: #0b0d12;
+                --app-surface: #111318;
+                --app-surface-alt: #201316;
+                --app-text: #f5f7fa;
+                --app-muted: #a8adb8;
+                --app-border: #2b3038;
+                --app-border-strong: #343a45;
+                --app-hover-border: #8a1f28;
+                --app-shadow-red: rgba(227, 6, 19, 0.28);
+            }
+        }
+        .stApp { background: var(--app-bg); color: var(--app-text); }
+        [data-testid="stHeader"] { background: var(--app-bg); }
+        h1, h2, h3, h4, h5, h6, p, label, span { color: var(--app-text); }
+        [data-testid="stMarkdownContainer"] { color: var(--app-text); }
         [data-testid="stMetricValue"] { color: #e30613; }
         section[data-testid="stSidebar"] {
-            background: #ffffff;
-            border-right: 1px solid #eeeeee;
+            background: var(--app-surface);
+            border-right: 1px solid var(--app-border);
             width: 190px !important;
             min-width: 190px !important;
             max-width: 190px !important;
@@ -1794,7 +1890,7 @@ def main():
             width: 148px;
             padding: 1rem 0 0.25rem;
             margin: auto auto 0;
-            border-top: 1px solid #eeeeee;
+            border-top: 1px solid var(--app-border);
         }
         .sidebar-brand img {
             width: 84px;
@@ -1803,7 +1899,7 @@ def main():
             flex: 0 0 auto;
         }
         .sidebar-brand-title {
-            color: #111111;
+            color: var(--app-text);
             font-size: 1.05rem;
             font-weight: 800;
             letter-spacing: 0;
@@ -1827,21 +1923,21 @@ def main():
             width: 148px;
             min-height: 44px;
             padding: 0.62rem 0.78rem;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--app-border-strong);
             border-radius: 8px;
-            background: #ffffff;
-            color: #111111;
+            background: var(--app-surface);
+            color: var(--app-text);
             transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-            background: #fff1f2;
-            border-color: #f3a3a8;
+            background: var(--app-surface-alt);
+            border-color: var(--app-hover-border);
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
             background: #e30613;
             border-color: #e30613;
             color: #ffffff;
-            box-shadow: 0 8px 18px rgba(227, 6, 19, 0.18);
+            box-shadow: 0 8px 18px var(--app-shadow-red);
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) * {
             color: #ffffff !important;
@@ -1861,7 +1957,14 @@ def main():
         }
         section[data-testid="stSidebar"] [data-testid="stSelectbox"] p {
             font-weight: 700;
-            color: #111111;
+            color: var(--app-text);
+        }
+        div[data-testid="stExpander"] details {
+            background: var(--app-surface);
+            border-color: var(--app-border);
+        }
+        div[data-testid="stTabs"] button p {
+            color: var(--app-text);
         }
         </style>
         """,
