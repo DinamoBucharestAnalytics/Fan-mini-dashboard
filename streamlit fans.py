@@ -95,6 +95,18 @@ def horizontal_bar_axis_range(data: pd.DataFrame, value_col: str) -> list[float]
         return None
     return [0, float(max_value)]
 
+
+def hidden_horizontal_axis_layout(data: pd.DataFrame, value_col: str, tickformat: str | None = ".0%") -> dict:
+    layout = {
+        "xaxis_range": horizontal_bar_axis_range(data, value_col),
+        "xaxis_showticklabels": False,
+        "xaxis_title": "",
+        "yaxis_title": "",
+    }
+    if tickformat:
+        layout["xaxis_tickformat"] = tickformat
+    return layout
+
 COUNTRY_NORMALIZE = {
     "romania": "Romania",
     "r moldova": "Moldova",
@@ -445,11 +457,7 @@ def bar_count(
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
-    axis_layout = (
-        {"xaxis_tickformat": ".0%", "xaxis_range": horizontal_bar_axis_range(data, "percentage")}
-        if horizontal
-        else {"yaxis_tickformat": ".0%"}
-    )
+    axis_layout = hidden_horizontal_axis_layout(data, "percentage") if horizontal else {"yaxis_tickformat": ".0%"}
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
@@ -623,8 +631,7 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(data), minimum=500, per_row=30),
-        xaxis_tickformat=".0%",
-        xaxis_range=horizontal_bar_axis_range(data, "percentage"),
+        **hidden_horizontal_axis_layout(data, "percentage"),
     )
     render_bar_chart(fig)
 
@@ -674,11 +681,7 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
-    axis_layout = (
-        {"xaxis_tickformat": ".0%", "xaxis_range": horizontal_bar_axis_range(plot_data, "percentage")}
-        if horizontal
-        else {"yaxis_tickformat": ".0%"}
-    )
+    axis_layout = hidden_horizontal_axis_layout(plot_data, "percentage") if horizontal else {"yaxis_tickformat": ".0%"}
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
@@ -953,7 +956,7 @@ def analysis_count_bar(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(plot_data)),
-        xaxis_range=horizontal_bar_axis_range(plot_data, count_col),
+        **hidden_horizontal_axis_layout(plot_data, count_col, tickformat=None),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -984,8 +987,7 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(plot_data)),
-        xaxis_tickformat=".0%",
-        xaxis_range=horizontal_bar_axis_range(plot_data, "percentage"),
+        **hidden_horizontal_axis_layout(plot_data, "percentage"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -1225,9 +1227,7 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(plot_data), minimum=500, per_row=30),
-        xaxis_tickformat=".0%",
-        xaxis_range=horizontal_bar_axis_range(plot_data, "percentage"),
-        yaxis_title="",
+        **hidden_horizontal_axis_layout(plot_data, "percentage"),
     )
     render_bar_chart(fig)
 
@@ -1760,9 +1760,7 @@ def club(df: pd.DataFrame):
                 fig.update_layout(
                     margin=dict(l=0, r=0, t=50, b=0),
                     height=horizontal_chart_height(len(data)),
-                    xaxis_tickformat=".0%",
-                    xaxis_range=horizontal_bar_axis_range(data, "percentage"),
-                    yaxis_title="",
+                    **hidden_horizontal_axis_layout(data, "percentage"),
                 )
                 st.plotly_chart(fig, use_container_width=True)
             with col2:
