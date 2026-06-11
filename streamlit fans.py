@@ -728,6 +728,16 @@ def analysis_text_box(text: str):
         st.info(text)
 
 
+def wrap_hover_bigrams(value: object, per_line: int = 10) -> str:
+    if pd.isna(value):
+        return ""
+    terms = [term.strip() for term in str(value).split(",") if term.strip()]
+    if len(terms) <= per_line:
+        return ", ".join(terms)
+    lines = [", ".join(terms[index:index + per_line]) for index in range(0, len(terms), per_line)]
+    return "<br>".join(lines)
+
+
 def keyword_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
     sheet = summaries.get(f"{prefix}_keywords", pd.DataFrame())
     if sheet.empty:
@@ -892,7 +902,9 @@ def analysis_count_bar(
     if "percentage" in plot_data.columns:
         custom_data.append("percentage")
     if hover_col and hover_col in plot_data.columns:
-        custom_data.append(hover_col)
+        wrapped_hover_col = f"_{hover_col}_wrapped"
+        plot_data[wrapped_hover_col] = plot_data[hover_col].map(wrap_hover_bigrams)
+        custom_data.append(wrapped_hover_col)
     fig = px.bar(
         plot_data.sort_values(count_col),
         x=count_col,
