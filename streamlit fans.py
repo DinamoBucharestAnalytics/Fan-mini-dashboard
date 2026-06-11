@@ -175,6 +175,16 @@ def hidden_horizontal_axis_layout(data: pd.DataFrame, value_col: str, tickformat
         layout["xaxis_tickformat"] = tickformat
     return layout
 
+
+def horizontal_bar_text_kwargs() -> dict:
+    return {
+        "textposition": "auto",
+        "insidetextanchor": "end",
+        "insidetextfont": {"color": "#ffffff"},
+        "outsidetextfont": {"color": theme_color("text")},
+        "cliponaxis": False,
+    }
+
 COUNTRY_NORMALIZE = {
     "romania": "Romania",
     "r moldova": "Moldova",
@@ -523,7 +533,10 @@ def bar_count(
             custom_data=["count", "percentage"],
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+    if horizontal:
+        fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+    else:
+        fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
     axis_layout = hidden_horizontal_axis_layout(data, "percentage") if horizontal else {"yaxis_tickformat": ".0%"}
     fig.update_layout(
@@ -698,7 +711,7 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         custom_data=["count", "percentage"],
     )
     fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+    fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
@@ -751,7 +764,10 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
             custom_data=["count", "percentage"],
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+    if horizontal:
+        fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+    else:
+        fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
     axis_layout = hidden_horizontal_axis_layout(plot_data, "percentage") if horizontal else {"yaxis_tickformat": ".0%"}
     fig.update_layout(
@@ -1023,7 +1039,7 @@ def analysis_count_bar(
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Key terms incluse: %{customdata[1]}<extra></extra>")
     else:
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+    fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
@@ -1051,9 +1067,8 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
     )
     fig.update_traces(
         marker_color=DINAMO_RED,
-        textposition="outside",
-        cliponaxis=False,
         hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        **horizontal_bar_text_kwargs(),
     )
     fig.update_layout(
         showlegend=False,
@@ -1291,9 +1306,8 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     )
     fig.update_traces(
         marker_color=DINAMO_RED,
-        textposition="outside",
-        cliponaxis=False,
         hovertemplate=f"%{{y}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
+        **horizontal_bar_text_kwargs(),
     )
     fig.update_layout(
         showlegend=False,
@@ -1797,7 +1811,7 @@ def club(df: pd.DataFrame):
                 custom_data=["count", "percentage"],
             )
             fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-            fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+            fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
             fig.update_layout(
                 margin=dict(l=0, r=0, t=50, b=0),
                 height=horizontal_chart_height(len(data)),
