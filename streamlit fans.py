@@ -512,7 +512,7 @@ def bar_count(
             title=title,
             custom_data=["count", "percentage"],
         )
-        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     else:
         fig = px.bar(
             data,
@@ -522,7 +522,7 @@ def bar_count(
             title=title,
             custom_data=["count", "percentage"],
         )
-        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+        fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
     axis_layout = hidden_horizontal_axis_layout(data, "percentage") if horizontal else {"yaxis_tickformat": ".0%"}
@@ -550,8 +550,12 @@ def donut(df: pd.DataFrame, col: str, title: str):
         hole=0.55,
         title=title,
         color_discrete_sequence=donut_palette(),
+        custom_data=["count", "percentage"],
     )
-    fig.update_traces(textinfo="percent+label")
+    fig.update_traces(
+        textinfo="percent+label",
+        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+    )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -586,7 +590,7 @@ def pie_count(
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
@@ -628,7 +632,7 @@ def country_romania_other_pie(df: pd.DataFrame):
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
@@ -663,7 +667,7 @@ def other_countries_pie(df: pd.DataFrame):
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
@@ -693,7 +697,7 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         title=title,
         custom_data=["count", "percentage"],
     )
-    fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+    fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     fig.update_layout(
         showlegend=False,
@@ -736,7 +740,7 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
             title=title,
             custom_data=["count", "percentage"],
         )
-        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     else:
         fig = px.bar(
             plot_data,
@@ -746,7 +750,7 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
             title=title,
             custom_data=["count", "percentage"],
         )
-        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+        fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
     axis_layout = hidden_horizontal_axis_layout(plot_data, "percentage") if horizontal else {"yaxis_tickformat": ".0%"}
@@ -1590,7 +1594,7 @@ def interactive_word_frequency(df: pd.DataFrame):
     )
     fig.update_traces(
         texttemplate="<b>%{label}</b><br>%{customdata[1]:.1%}",
-        hovertemplate="<b>%{label}</b><br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        hovertemplate="<b>%{label}</b><br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
     )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=TREEMAP_CHART_HEIGHT, coloraxis_colorbar_title="Count")
     st.plotly_chart(fig, use_container_width=True)
@@ -1760,7 +1764,7 @@ def club(df: pd.DataFrame):
             )
             fig.update_traces(
                 textinfo="percent+label",
-                hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+                hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
             )
             fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
             st.plotly_chart(fig, use_container_width=True)
@@ -1792,7 +1796,7 @@ def club(df: pd.DataFrame):
                 title="Season ticket drivers",
                 custom_data=["count", "percentage"],
             )
-            fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+            fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
             fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
             fig.update_layout(
                 margin=dict(l=0, r=0, t=50, b=0),
@@ -1811,7 +1815,7 @@ def club(df: pd.DataFrame):
             pie_fig.update_traces(
                 textinfo="label+percent",
                 textposition="outside",
-                hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
+                hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
                 marker=dict(line=dict(color=theme_color("surface"), width=1)),
                 automargin=True,
             )
