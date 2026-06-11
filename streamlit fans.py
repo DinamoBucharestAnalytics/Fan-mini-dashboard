@@ -92,6 +92,8 @@ TREEMAP_CHART_HEIGHT = 600
 BAR_CHART_WIDTH = 900
 HORIZONTAL_BAR_DISPLAY_SCALE = 0.90
 HORIZONTAL_BAR_DISPLAY_COL = "_bar_display_value"
+HORIZONTAL_BAR_TEXT_POSITION_COL = "_bar_text_position"
+HORIZONTAL_BAR_INSIDE_THRESHOLD = 0.18
 
 
 def current_theme_type() -> str | None:
@@ -153,7 +155,12 @@ def render_bar_chart(fig, width: int = BAR_CHART_WIDTH):
 
 def with_horizontal_bar_display_value(data: pd.DataFrame, value_col: str) -> pd.DataFrame:
     plot_data = data.copy()
-    plot_data[HORIZONTAL_BAR_DISPLAY_COL] = pd.to_numeric(plot_data[value_col], errors="coerce").fillna(0) * HORIZONTAL_BAR_DISPLAY_SCALE
+    values = pd.to_numeric(plot_data[value_col], errors="coerce").fillna(0)
+    max_value = values.max()
+    plot_data[HORIZONTAL_BAR_DISPLAY_COL] = values * HORIZONTAL_BAR_DISPLAY_SCALE
+    plot_data[HORIZONTAL_BAR_TEXT_POSITION_COL] = values.map(
+        lambda value: "inside" if max_value > 0 and value / max_value >= HORIZONTAL_BAR_INSIDE_THRESHOLD else "outside"
+    )
     return plot_data
 
 
@@ -176,13 +183,17 @@ def hidden_horizontal_axis_layout(data: pd.DataFrame, value_col: str, tickformat
     return layout
 
 
-def horizontal_bar_text_kwargs() -> dict:
+def horizontal_bar_text_kwargs(data: pd.DataFrame | None = None) -> dict:
+    positions = None
+    if data is not None and HORIZONTAL_BAR_TEXT_POSITION_COL in data.columns:
+        positions = data[HORIZONTAL_BAR_TEXT_POSITION_COL].tolist()
     return {
-        "textposition": "auto",
+        "textposition": positions if positions is not None else "outside",
         "insidetextanchor": "end",
         "insidetextfont": {"color": "#ffffff"},
         "outsidetextfont": {"color": theme_color("text")},
         "cliponaxis": False,
+        "textangle": 0,
     }
 
 COUNTRY_NORMALIZE = {
@@ -534,7 +545,7 @@ def bar_count(
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     if horizontal:
-        fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+        fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs(plot_data))
     else:
         fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
@@ -711,7 +722,7 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         custom_data=["count", "percentage"],
     )
     fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+    fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs(plot_data))
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
@@ -765,7 +776,7 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         )
         fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
     if horizontal:
-        fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+        fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs(plot_data))
     else:
         fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
@@ -1022,8 +1033,9 @@ def analysis_count_bar(
         wrapped_hover_col = f"_{hover_col}_wrapped"
         plot_data[wrapped_hover_col] = plot_data[hover_col].map(wrap_hover_bigrams)
         custom_data.append(wrapped_hover_col)
+    plot_data = plot_data.sort_values(count_col)
     fig = px.bar(
-        plot_data.sort_values(count_col),
+        plot_data,
         x=HORIZONTAL_BAR_DISPLAY_COL,
         y=label_col,
         orientation="h",
@@ -1039,7 +1051,7 @@ def analysis_count_bar(
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Key terms incluse: %{customdata[1]}<extra></extra>")
     else:
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+    fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs(plot_data))
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
@@ -1056,8 +1068,9 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
     plot_data = data.copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
     plot_data = with_horizontal_bar_display_value(plot_data, "percentage")
+    plot_data = plot_data.sort_values("percentage")
     fig = px.bar(
-        plot_data.sort_values("percentage"),
+        plot_data,
         x=HORIZONTAL_BAR_DISPLAY_COL,
         y=label_col,
         orientation="h",
@@ -1068,7 +1081,7 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
     fig.update_traces(
         marker_color=DINAMO_RED,
         hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
-        **horizontal_bar_text_kwargs(),
+        **horizontal_bar_text_kwargs(plot_data),
     )
     fig.update_layout(
         showlegend=False,
@@ -1295,8 +1308,9 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     plot_data = data.head(20).copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
     plot_data = with_horizontal_bar_display_value(plot_data, "percentage")
+    plot_data = plot_data.sort_values("percentage")
     fig = px.bar(
-        plot_data.sort_values("percentage"),
+        plot_data,
         x=HORIZONTAL_BAR_DISPLAY_COL,
         y=label_col,
         orientation="h",
@@ -1307,7 +1321,7 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     fig.update_traces(
         marker_color=DINAMO_RED,
         hovertemplate=f"%{{y}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
-        **horizontal_bar_text_kwargs(),
+        **horizontal_bar_text_kwargs(plot_data),
     )
     fig.update_layout(
         showlegend=False,
@@ -1811,7 +1825,7 @@ def club(df: pd.DataFrame):
                 custom_data=["count", "percentage"],
             )
             fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-            fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs())
+            fig.update_traces(marker_color=DINAMO_RED, **horizontal_bar_text_kwargs(plot_data))
             fig.update_layout(
                 margin=dict(l=0, r=0, t=50, b=0),
                 height=horizontal_chart_height(len(data)),
