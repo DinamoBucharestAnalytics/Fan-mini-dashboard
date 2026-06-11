@@ -720,11 +720,12 @@ def extract_analysis_explanation(sheet: pd.DataFrame) -> str:
                 continue
             if text not in texts:
                 texts.append(text)
-    return "\n\n".join(texts) if texts else "No interpretation text found in the source sheet."
+    return "\n\n".join(texts)
 
 
 def analysis_text_box(text: str):
-    st.info(text)
+    if text:
+        st.info(text)
 
 
 def keyword_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
