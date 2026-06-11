@@ -1419,47 +1419,45 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         st.info(f"No sex demographic data available for {platform}.")
         return
     metric_label = social_metric_label(platform)
-    col1, col2 = st.columns(2)
-    with col1:
-        fig = px.pie(
-            data,
-            names="Sex",
-            values="followers",
-            hole=0.55,
-            title=f"Sex distribution - {platform}",
-            color="Sex",
-            color_discrete_map={"Men": DINAMO_RED, "Women": "#dddddd"},
-            custom_data=["followers", "percentage"],
-        )
-        fig.update_traces(
-            textinfo="label+percent",
-            hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
-        )
-        fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
-        st.plotly_chart(fig, use_container_width=True)
-    with col2:
-        data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
-        fig = px.bar(
-            data,
-            x="Sex",
-            y="percentage",
-            text="percentage_label",
-            title=f"Sex share - {platform}",
-            custom_data=["followers", "percentage"],
-        )
-        fig.update_traces(
-            marker_color=[DINAMO_RED, "#dddddd"],
-            textposition="outside",
-            hovertemplate=f"%{{x}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
-        )
-        fig.update_layout(
-            showlegend=False,
-            margin=dict(l=0, r=0, t=50, b=0),
-            height=VERTICAL_CHART_HEIGHT,
-            yaxis_tickformat=".0%",
-            yaxis_title="Percentage",
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+    fig = px.bar(
+        data,
+        x="Sex",
+        y="percentage",
+        text="percentage_label",
+        title=f"Sex share - {platform}",
+        custom_data=["followers", "percentage"],
+    )
+    fig.update_traces(
+        marker_color=[DINAMO_RED, "#dddddd"],
+        textposition="outside",
+        hovertemplate=f"%{{x}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=VERTICAL_CHART_HEIGHT,
+        yaxis_tickformat=".0%",
+        yaxis_title="Percentage",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig = px.pie(
+        data,
+        names="Sex",
+        values="followers",
+        hole=0.55,
+        title=f"Sex distribution - {platform}",
+        color="Sex",
+        color_discrete_map={"Men": DINAMO_RED, "Women": "#dddddd"},
+        custom_data=["followers", "percentage"],
+    )
+    fig.update_traces(
+        textinfo="label+percent",
+        hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
+    )
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def platform_demographics(demo_df: pd.DataFrame, geo_df: pd.DataFrame, platform: str):
@@ -1486,11 +1484,8 @@ def platform_demographics(demo_df: pd.DataFrame, geo_df: pd.DataFrame, platform:
     for tab, (_, key) in zip(tabs, tab_specs):
         with tab:
             if key == "age":
-                col1, col2 = st.columns(2)
-                with col1:
-                    social_age_bar(demo_df, platform)
-                with col2:
-                    social_age_pie(demo_df, platform)
+                social_age_bar(demo_df, platform)
+                social_age_pie(demo_df, platform)
             elif key == "sex":
                 social_sex_charts(demo_df, platform)
             elif key == "countries":
@@ -1585,17 +1580,11 @@ def demographics(df: pd.DataFrame):
             pie_count(df, "Gen", "Gender share")
     with tabs[2]:
         romania_county_map(df)
-        col1, col2 = st.columns(2)
-        with col1:
-            top_bar(df, "Județ atribuit", "Top counties")
-        with col2:
-            pie_count(df, "Județ atribuit", "County share", top_n=12)
+        top_bar(df, "Județ atribuit", "Top counties")
+        pie_count(df, "Județ atribuit", "County share", top_n=12)
     with tabs[3]:
-        col1, col2 = st.columns(2)
-        with col1:
-            top_bar(df, "Regiune atribuită", "Regions", n=10)
-        with col2:
-            pie_count(df, "Regiune atribuită", "Region share")
+        top_bar(df, "Regiune atribuită", "Regions", n=10)
+        pie_count(df, "Regiune atribuită", "Region share")
     with tabs[4]:
         if "Mediu atribuit" in df.columns:
             col1, col2 = st.columns(2)
@@ -1614,11 +1603,8 @@ def demographics(df: pd.DataFrame):
         with col2:
             other_countries_pie(df)
     with tabs[6]:
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(df, "Educație", "Education", education_order)
-        with col2:
-            pie_count(df, "Educație", "Education share", order=education_order)
+        ordered_likert_chart(df, "Educație", "Education", education_order)
+        pie_count(df, "Educație", "Education share", order=education_order)
     with tabs[7]:
         col1, col2 = st.columns(2)
         with col1:
@@ -1627,11 +1613,8 @@ def demographics(df: pd.DataFrame):
             pie_count(df, "Ai copii?", "Children share")
     with tabs[8]:
         child_df = df[df["Ai copii?"].astype(str).str.lower().eq("da")]
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(child_df, "Vii cu copiii la meci?", "Children at matches", children_match_order)
-        with col2:
-            pie_count(child_df, "Vii cu copiii la meci?", "Children at matches share", order=children_match_order)
+        ordered_likert_chart(child_df, "Vii cu copiii la meci?", "Children at matches", children_match_order)
+        pie_count(child_df, "Vii cu copiii la meci?", "Children at matches share", order=children_match_order)
 
 
 def sentiment(df: pd.DataFrame, summaries: dict[str, pd.DataFrame]):
@@ -1657,17 +1640,14 @@ def sentiment(df: pd.DataFrame, summaries: dict[str, pd.DataFrame]):
         word_cloud(df)
     with tabs[2]:
         supporter_tenure_order = ["Am început recent", "De câțiva ani", "De peste 10 ani", "De mic, am crescut cu Dinamo"]
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(
-                df,
-                "De cât timp ești suporter Dinamo?",
-                "Supporter tenure",
-                supporter_tenure_order,
-                fixed_width=False,
-            )
-        with col2:
-            pie_count(df, "De cât timp ești suporter Dinamo?", "Supporter tenure share", order=supporter_tenure_order)
+        ordered_likert_chart(
+            df,
+            "De cât timp ești suporter Dinamo?",
+            "Supporter tenure",
+            supporter_tenure_order,
+            fixed_width=False,
+        )
+        pie_count(df, "De cât timp ești suporter Dinamo?", "Supporter tenure share", order=supporter_tenure_order)
     with tabs[3]:
         open_answer_analysis(summaries, "col_1", "What Dinamo does well")
     with tabs[4]:
@@ -1688,17 +1668,14 @@ def club(df: pd.DataFrame):
     ])
     with tabs[0]:
         off_field_order = ["În regres vizibil", "În ușor regres", "Stabil", "În ușoară creștere", "În creștere vizibilă", "Nu am o părere formată"]
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(
-                df,
-                "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?",
-                "Off-field evaluation",
-                off_field_order,
-                fixed_width=False,
-            )
-        with col2:
-            pie_count(df, "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?", "Off-field evaluation share", order=off_field_order)
+        ordered_likert_chart(
+            df,
+            "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?",
+            "Off-field evaluation",
+            off_field_order,
+            fixed_width=False,
+        )
+        pie_count(df, "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?", "Off-field evaluation share", order=off_field_order)
     with tabs[1]:
         col1, col2 = st.columns(2)
         with col1:
@@ -1736,65 +1713,56 @@ def club(df: pd.DataFrame):
         if data.empty:
             st.info("No season ticket driver data.")
         else:
-            col1, col2 = st.columns(2)
-            with col1:
-                data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
-                plot_data = with_horizontal_bar_display_value(data.sort_values("percentage"), "percentage")
-                fig = px.bar(
-                    plot_data,
-                    x=HORIZONTAL_BAR_DISPLAY_COL,
-                    y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
-                    orientation="h",
-                    text="percentage_label",
-                    title="Season ticket drivers",
-                    custom_data=["count", "percentage"],
-                )
-                fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-                fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
-                fig.update_layout(
-                    margin=dict(l=0, r=0, t=50, b=0),
-                    height=horizontal_chart_height(len(data)),
-                    **hidden_horizontal_axis_layout(data, "percentage"),
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            with col2:
-                pie_fig = px.pie(
-                    data,
-                    names="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
-                    values="count",
-                    title="Season ticket drivers share",
-                    color_discrete_sequence=PIE_COLORS,
-                    custom_data=["count", "percentage"],
-                )
-                pie_fig.update_traces(
-                    textinfo="label+percent",
-                    textposition="outside",
-                    hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
-                    marker=dict(line=dict(color="white", width=1)),
-                    automargin=True,
-                )
-                pie_fig.update_layout(
-                    showlegend=False,
-                    margin=dict(l=10, r=10, t=50, b=10),
-                    height=VERTICAL_CHART_HEIGHT,
-                    uniformtext_minsize=10,
-                    uniformtext_mode="hide",
-                )
-                st.plotly_chart(pie_fig, use_container_width=True)
+            data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+            plot_data = with_horizontal_bar_display_value(data.sort_values("percentage"), "percentage")
+            fig = px.bar(
+                plot_data,
+                x=HORIZONTAL_BAR_DISPLAY_COL,
+                y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
+                orientation="h",
+                text="percentage_label",
+                title="Season ticket drivers",
+                custom_data=["count", "percentage"],
+            )
+            fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+            fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+            fig.update_layout(
+                margin=dict(l=0, r=0, t=50, b=0),
+                height=horizontal_chart_height(len(data)),
+                **hidden_horizontal_axis_layout(data, "percentage"),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            pie_fig = px.pie(
+                data,
+                names="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
+                values="count",
+                title="Season ticket drivers share",
+                color_discrete_sequence=PIE_COLORS,
+                custom_data=["count", "percentage"],
+            )
+            pie_fig.update_traces(
+                textinfo="label+percent",
+                textposition="outside",
+                hovertemplate="%{label}<br>Count: %{customdata[0]}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
+                marker=dict(line=dict(color="white", width=1)),
+                automargin=True,
+            )
+            pie_fig.update_layout(
+                showlegend=False,
+                margin=dict(l=10, r=10, t=50, b=10),
+                height=VERTICAL_CHART_HEIGHT,
+                uniformtext_minsize=10,
+                uniformtext_mode="hide",
+            )
+            st.plotly_chart(pie_fig, use_container_width=True)
     with tabs[3]:
         brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", brand_order, fixed_width=False)
-        with col2:
-            pie_count(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity share", order=brand_order)
+        ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", brand_order, fixed_width=False)
+        pie_count(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity share", order=brand_order)
     with tabs[4]:
         brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift", brand_order, fixed_width=False)
-        with col2:
-            pie_count(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift share", order=brand_order)
+        ordered_likert_chart(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift", brand_order, fixed_width=False)
+        pie_count(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift share", order=brand_order)
 
 
 def main():
