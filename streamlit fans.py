@@ -66,6 +66,8 @@ VERTICAL_CHART_HEIGHT = 460
 MAP_CHART_HEIGHT = 600
 TREEMAP_CHART_HEIGHT = 600
 BAR_CHART_WIDTH = 900
+HORIZONTAL_BAR_DISPLAY_SCALE = 0.90
+HORIZONTAL_BAR_DISPLAY_COL = "_bar_display_value"
 
 
 def image_data_uri(path: Path, mime_type: str) -> str:
@@ -79,6 +81,19 @@ def horizontal_chart_height(row_count: int, minimum: int = 420, per_row: int = 3
 def render_bar_chart(fig, width: int = BAR_CHART_WIDTH):
     fig.update_layout(width=width)
     st.plotly_chart(fig, use_container_width=False)
+
+
+def with_horizontal_bar_display_value(data: pd.DataFrame, value_col: str) -> pd.DataFrame:
+    plot_data = data.copy()
+    plot_data[HORIZONTAL_BAR_DISPLAY_COL] = pd.to_numeric(plot_data[value_col], errors="coerce").fillna(0) * HORIZONTAL_BAR_DISPLAY_SCALE
+    return plot_data
+
+
+def horizontal_bar_axis_range(data: pd.DataFrame, value_col: str) -> list[float] | None:
+    max_value = pd.to_numeric(data[value_col], errors="coerce").max()
+    if pd.isna(max_value) or max_value <= 0:
+        return None
+    return [0, float(max_value)]
 
 COUNTRY_NORMALIZE = {
     "romania": "Romania",
@@ -407,10 +422,10 @@ def bar_count(
         return
     data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
     if horizontal:
-        plot_data = data.sort_values("percentage")
+        plot_data = with_horizontal_bar_display_value(data.sort_values("percentage"), "percentage")
         fig = px.bar(
             plot_data,
-            x="percentage",
+            x=HORIZONTAL_BAR_DISPLAY_COL,
             y=col,
             orientation="h",
             text="percentage_label",
@@ -427,15 +442,19 @@ def bar_count(
             title=title,
             custom_data=["count", "percentage"],
         )
-        fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(data)) if horizontal else VERTICAL_CHART_HEIGHT
-    axis_tickformat = {"xaxis_tickformat": ".0%"} if horizontal else {"yaxis_tickformat": ".0%"}
+    axis_layout = (
+        {"xaxis_tickformat": ".0%", "xaxis_range": horizontal_bar_axis_range(data, "percentage")}
+        if horizontal
+        else {"yaxis_tickformat": ".0%"}
+    )
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=chart_height,
-        **axis_tickformat,
+        **axis_layout,
     )
     if fixed_width:
         render_bar_chart(fig)
@@ -588,9 +607,10 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         st.info("No data for the current filters.")
         return
     data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+    plot_data = with_horizontal_bar_display_value(data.sort_values("percentage"), "percentage")
     fig = px.bar(
-        data.sort_values("percentage"),
-        x="percentage",
+        plot_data,
+        x=HORIZONTAL_BAR_DISPLAY_COL,
         y=col,
         orientation="h",
         text="percentage_label",
@@ -598,12 +618,13 @@ def top_bar(df: pd.DataFrame, col: str, title: str, n: int = 20):
         custom_data=["count", "percentage"],
     )
     fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(data), minimum=500, per_row=30),
         xaxis_tickformat=".0%",
+        xaxis_range=horizontal_bar_axis_range(data, "percentage"),
     )
     render_bar_chart(fig)
 
@@ -630,10 +651,10 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
     plot_data = data.copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
     if horizontal:
-        plot_data = plot_data.sort_values("percentage")
+        plot_data = with_horizontal_bar_display_value(plot_data.sort_values("percentage"), "percentage")
         fig = px.bar(
             plot_data,
-            x="percentage",
+            x=HORIZONTAL_BAR_DISPLAY_COL,
             y=label_col,
             orientation="h",
             text="percentage_label",
@@ -650,15 +671,19 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
             title=title,
             custom_data=["count", "percentage"],
         )
-        fig.update_traces(hovertemplate="%{x}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
+    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
     chart_height = horizontal_chart_height(len(plot_data)) if horizontal else VERTICAL_CHART_HEIGHT
-    axis_tickformat = {"xaxis_tickformat": ".0%"} if horizontal else {"yaxis_tickformat": ".0%"}
+    axis_layout = (
+        {"xaxis_tickformat": ".0%", "xaxis_range": horizontal_bar_axis_range(plot_data, "percentage")}
+        if horizontal
+        else {"yaxis_tickformat": ".0%"}
+    )
     fig.update_layout(
         showlegend=False,
         margin=dict(l=0, r=0, t=50, b=0),
         height=chart_height,
-        **axis_tickformat,
+        **axis_layout,
     )
     if fixed_width:
         render_bar_chart(fig)
@@ -898,6 +923,7 @@ def analysis_count_bar(
     if top_n:
         plot_data = plot_data.head(top_n)
     plot_data["count_label"] = plot_data[count_col].map(lambda value: f"{int(value):,}")
+    plot_data = with_horizontal_bar_display_value(plot_data, count_col)
     custom_data = [count_col]
     if "percentage" in plot_data.columns:
         custom_data.append("percentage")
@@ -907,7 +933,7 @@ def analysis_count_bar(
         custom_data.append(wrapped_hover_col)
     fig = px.bar(
         plot_data.sort_values(count_col),
-        x=count_col,
+        x=HORIZONTAL_BAR_DISPLAY_COL,
         y=label_col,
         orientation="h",
         text="count_label",
@@ -922,8 +948,13 @@ def analysis_count_bar(
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Key terms incluse: %{customdata[1]}<extra></extra>")
     else:
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<extra></extra>")
-    fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), height=horizontal_chart_height(len(plot_data)))
+    fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=horizontal_chart_height(len(plot_data)),
+        xaxis_range=horizontal_bar_axis_range(plot_data, count_col),
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -933,9 +964,10 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
         return
     plot_data = data.copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
+    plot_data = with_horizontal_bar_display_value(plot_data, "percentage")
     fig = px.bar(
         plot_data.sort_values("percentage"),
-        x="percentage",
+        x=HORIZONTAL_BAR_DISPLAY_COL,
         y=label_col,
         orientation="h",
         text="percentage_label",
@@ -945,6 +977,7 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
     fig.update_traces(
         marker_color=DINAMO_RED,
         textposition="outside",
+        cliponaxis=False,
         hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
     )
     fig.update_layout(
@@ -952,6 +985,7 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(plot_data)),
         xaxis_tickformat=".0%",
+        xaxis_range=horizontal_bar_axis_range(plot_data, "percentage"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -1171,9 +1205,10 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     metric_label = social_metric_label(platform)
     plot_data = data.head(20).copy()
     plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
+    plot_data = with_horizontal_bar_display_value(plot_data, "percentage")
     fig = px.bar(
         plot_data.sort_values("percentage"),
-        x="percentage",
+        x=HORIZONTAL_BAR_DISPLAY_COL,
         y=label_col,
         orientation="h",
         text="percentage_label",
@@ -1183,6 +1218,7 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
     fig.update_traces(
         marker_color=DINAMO_RED,
         textposition="outside",
+        cliponaxis=False,
         hovertemplate=f"%{{y}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
     )
     fig.update_layout(
@@ -1190,6 +1226,7 @@ def social_top_bar(data: pd.DataFrame, label_col: str, title: str):
         margin=dict(l=0, r=0, t=50, b=0),
         height=horizontal_chart_height(len(plot_data), minimum=500, per_row=30),
         xaxis_tickformat=".0%",
+        xaxis_range=horizontal_bar_axis_range(plot_data, "percentage"),
         yaxis_title="",
     )
     render_bar_chart(fig)
@@ -1708,9 +1745,10 @@ def club(df: pd.DataFrame):
             col1, col2 = st.columns(2)
             with col1:
                 data["percentage_label"] = data["percentage"].map(lambda value: f"{value:.1%}")
+                plot_data = with_horizontal_bar_display_value(data.sort_values("percentage"), "percentage")
                 fig = px.bar(
-                    data.sort_values("percentage"),
-                    x="percentage",
+                    plot_data,
+                    x=HORIZONTAL_BAR_DISPLAY_COL,
                     y="Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
                     orientation="h",
                     text="percentage_label",
@@ -1718,11 +1756,12 @@ def club(df: pd.DataFrame):
                     custom_data=["count", "percentage"],
                 )
                 fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]}<br>Percentage: %{customdata[1]:.1%}<extra></extra>")
-                fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+                fig.update_traces(marker_color=DINAMO_RED, textposition="outside", cliponaxis=False)
                 fig.update_layout(
                     margin=dict(l=0, r=0, t=50, b=0),
                     height=horizontal_chart_height(len(data)),
                     xaxis_tickformat=".0%",
+                    xaxis_range=horizontal_bar_axis_range(data, "percentage"),
                     yaxis_title="",
                 )
                 st.plotly_chart(fig, use_container_width=True)
