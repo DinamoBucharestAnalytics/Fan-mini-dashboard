@@ -660,6 +660,255 @@ def bar_from_counts(data: pd.DataFrame, label_col: str, title: str, horizontal: 
         st.plotly_chart(fig, use_container_width=True)
 
 
+def analysis_count(value: object) -> int:
+    if pd.isna(value):
+        return 0
+    if isinstance(value, (int, float)):
+        number = float(value)
+        if 0 < number < 100 and not math.isclose(number, round(number)):
+            return int(round(number * 1000))
+        return int(round(number))
+
+    text = str(value).strip()
+    if not text or "%" in text:
+        return 0
+    text = re.sub(r"\s+", "", text)
+    if re.fullmatch(r"\d{1,3}(\.\d{3})+", text):
+        return int(text.replace(".", ""))
+    try:
+        number = float(text.replace(",", "."))
+    except ValueError:
+        return 0
+    if 0 < number < 100 and not math.isclose(number, round(number)):
+        return int(round(number * 1000))
+    return int(round(number))
+
+
+def analysis_percentage(value: object) -> float:
+    if pd.isna(value):
+        return 0.0
+    if isinstance(value, (int, float)):
+        number = float(value)
+        return number if 0 <= number <= 1 else number / 100
+
+    text = str(value).strip().replace(" ", "")
+    if not text:
+        return 0.0
+    has_percent = "%" in text
+    text = text.replace("%", "").replace(",", ".")
+    try:
+        number = float(text)
+    except ValueError:
+        return 0.0
+    return number / 100 if has_percent or number > 1 else number
+
+
+def extract_analysis_explanation(sheet: pd.DataFrame) -> str:
+    texts = []
+    for col in sheet.columns:
+        if not str(col).startswith("Unnamed"):
+            continue
+        for value in sheet[col].dropna():
+            text = str(value).strip()
+            if len(text) < 50:
+                continue
+            if text not in texts:
+                texts.append(text)
+    return "\n\n".join(texts) if texts else "No interpretation text found in the source sheet."
+
+
+def analysis_text_box(text: str):
+    st.info(text)
+
+
+def keyword_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
+    sheet = summaries.get(f"{prefix}_keywords", pd.DataFrame())
+    if sheet.empty:
+        return pd.DataFrame(columns=["keyword normalizat", "frequency agregat", "percentage"])
+    keyword_col = sheet.columns[5] if len(sheet.columns) > 6 else sheet.columns[0]
+    count_col = sheet.columns[6] if len(sheet.columns) > 6 else sheet.columns[1]
+    out = sheet[[keyword_col, count_col]].copy()
+    out.columns = ["keyword normalizat", "frequency agregat"]
+    out["keyword normalizat"] = out["keyword normalizat"].fillna("").astype(str).str.strip()
+    out["frequency agregat"] = out["frequency agregat"].map(analysis_count)
+    out = out[out["keyword normalizat"].ne("") & out["frequency agregat"].gt(0)]
+    out = out.groupby("keyword normalizat", as_index=False)["frequency agregat"].sum()
+    total = out["frequency agregat"].sum()
+    out["percentage"] = out["frequency agregat"] / total if total else 0
+    return out.sort_values("frequency agregat", ascending=False).reset_index(drop=True)
+
+
+def topic_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
+    sheet = summaries.get(f"{prefix}_topics", pd.DataFrame())
+    if sheet.empty:
+        return pd.DataFrame(columns=["topic", "count", "percentage"])
+    topic_col = "Topic Definition.1" if "Topic Definition.1" in sheet.columns else "Topic Definition"
+    count_col = "Responses.1" if "Responses.1" in sheet.columns else "Responses"
+    pct_col = "%" if "%" in sheet.columns else None
+    out = sheet[[topic_col, count_col] + ([pct_col] if pct_col else [])].copy()
+    out.columns = ["topic", "count"] + (["percentage"] if pct_col else [])
+    out["topic"] = out["topic"].fillna("").astype(str).str.strip()
+    out["count"] = out["count"].map(analysis_count)
+    if "percentage" in out.columns:
+        out["percentage"] = out["percentage"].map(analysis_percentage)
+    else:
+        total = out["count"].sum()
+        out["percentage"] = out["count"] / total if total else 0
+    out = out[out["topic"].ne("") & out["count"].gt(0)]
+    return out.sort_values("count", ascending=False).reset_index(drop=True)
+
+
+def results_tables(summaries: dict[str, pd.DataFrame], prefix: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    sheet = summaries.get(f"{prefix}_classified_RESULTS", pd.DataFrame())
+    empty = pd.DataFrame(columns=["label", "count", "percentage"])
+    if sheet.empty or len(sheet.columns) < 3:
+        return empty, empty.copy()
+
+    sentiment = sheet.iloc[:, :3].copy()
+    sentiment.columns = ["label", "count", "percentage"]
+    sentiment["label"] = sentiment["label"].fillna("").astype(str).str.strip()
+    sentiment["count"] = sentiment["count"].map(analysis_count)
+    sentiment["percentage"] = sentiment["percentage"].map(analysis_percentage)
+    sentiment = sentiment[sentiment["label"].ne("") & sentiment["count"].gt(0)]
+
+    tone_cols = [idx for idx, col in enumerate(sheet.columns) if normalize_text(col) == "ton"]
+    if tone_cols and tone_cols[0] + 2 < len(sheet.columns):
+        idx = tone_cols[0]
+        tone = sheet.iloc[:, idx:idx + 3].copy()
+        tone.columns = ["label", "count", "percentage"]
+        tone["label"] = tone["label"].fillna("").astype(str).str.strip()
+        tone["count"] = tone["count"].map(analysis_count)
+        tone["percentage"] = tone["percentage"].map(analysis_percentage)
+        tone = tone[tone["label"].ne("") & tone["count"].gt(0)]
+    else:
+        tone = empty.copy()
+
+    return sentiment.reset_index(drop=True), tone.reset_index(drop=True)
+
+
+def classified_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.DataFrame:
+    sheet = summaries.get(f"{prefix}_classified", pd.DataFrame()).copy()
+    if sheet.empty:
+        return sheet
+    first_col = sheet.columns[0]
+    sheet = sheet[sheet[first_col].notna() & sheet[first_col].astype(str).str.strip().ne("")]
+    renamed = {}
+    for col in sheet.columns:
+        col_text = str(col)
+        if col == first_col:
+            renamed[col] = "Answer"
+        elif col_text.endswith("__sentiment_score"):
+            renamed[col] = "Sentiment score"
+        elif col_text.endswith("__sentiment"):
+            renamed[col] = "Sentiment"
+        elif col_text.endswith("__emotion"):
+            renamed[col] = "Tone / emotion"
+        elif col_text.endswith("__word_count"):
+            renamed[col] = "Word count"
+    return sheet.rename(columns=renamed).reset_index(drop=True)
+
+
+def analysis_count_bar(data: pd.DataFrame, label_col: str, count_col: str, title: str, top_n: int | None = None):
+    if data.empty:
+        st.info("No data in this analysis table.")
+        return
+    plot_data = data.copy()
+    if top_n:
+        plot_data = plot_data.head(top_n)
+    plot_data["count_label"] = plot_data[count_col].map(lambda value: f"{int(value):,}")
+    fig = px.bar(
+        plot_data.sort_values(count_col),
+        x=count_col,
+        y=label_col,
+        orientation="h",
+        text="count_label",
+        title=title,
+        custom_data=[count_col, "percentage"] if "percentage" in plot_data.columns else [count_col],
+    )
+    if "percentage" in plot_data.columns:
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Share: %{customdata[1]:.1%}<extra></extra>")
+    else:
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<extra></extra>")
+    fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
+    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=50, b=0), height=horizontal_chart_height(len(plot_data)))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
+    if data.empty:
+        st.info("No data in this analysis table.")
+        return
+    plot_data = data.copy()
+    plot_data["percentage_label"] = plot_data["percentage"].map(lambda value: f"{value:.1%}")
+    fig = px.bar(
+        plot_data.sort_values("percentage"),
+        x="percentage",
+        y=label_col,
+        orientation="h",
+        text="percentage_label",
+        title=title,
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(
+        marker_color=DINAMO_RED,
+        textposition="outside",
+        hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=horizontal_chart_height(len(plot_data)),
+        xaxis_tickformat=".0%",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def open_answer_analysis(summaries: dict[str, pd.DataFrame], prefix: str, title: str):
+    st.caption("This open-answer analysis uses the full survey analysis sheets and does not change with sidebar filters.")
+
+    keywords = keyword_table(summaries, prefix)
+    keyword_sheet = summaries.get(f"{prefix}_keywords", pd.DataFrame())
+    st.markdown("#### Keyword signals")
+    left, right = st.columns([2, 1])
+    with left:
+        analysis_count_bar(keywords, "keyword normalizat", "frequency agregat", "Top normalized keywords", top_n=20)
+        with st.expander("Keyword table", expanded=False):
+            st.dataframe(keywords, use_container_width=True, hide_index=True)
+    with right:
+        analysis_text_box(extract_analysis_explanation(keyword_sheet))
+
+    topics = topic_table(summaries, prefix)
+    topic_sheet = summaries.get(f"{prefix}_topics", pd.DataFrame())
+    st.markdown("#### Topics")
+    left, right = st.columns([2, 1])
+    with left:
+        analysis_percentage_bar(topics.rename(columns={"topic": "label"}), "label", "Topic distribution")
+        with st.expander("Topic table", expanded=False):
+            st.dataframe(topics, use_container_width=True, hide_index=True)
+    with right:
+        analysis_text_box(extract_analysis_explanation(topic_sheet))
+
+    sentiment_table, tone_table = results_tables(summaries, prefix)
+    results_sheet = summaries.get(f"{prefix}_classified_RESULTS", pd.DataFrame())
+    st.markdown("#### Sentiment and tone")
+    chart_col1, chart_col2, text_col = st.columns([1.2, 1.2, 1])
+    with chart_col1:
+        analysis_percentage_bar(sentiment_table, "label", "Sentiment")
+    with chart_col2:
+        analysis_percentage_bar(tone_table, "label", "Tone")
+    with text_col:
+        analysis_text_box(extract_analysis_explanation(results_sheet))
+
+    classified = classified_table(summaries, prefix)
+    with st.expander("Raw classified answers", expanded=False):
+        query = st.text_input("Search answers", key=f"{prefix}_classified_search")
+        view = classified
+        if query and not classified.empty:
+            mask = classified.astype(str).apply(lambda col: col.str.contains(query, case=False, na=False, regex=False)).any(axis=1)
+            view = classified[mask]
+        st.dataframe(view, use_container_width=True, hide_index=True)
+
+
 def logo_mention_counts(df: pd.DataFrame) -> pd.DataFrame:
     total = len(df)
     mentioned = df["Siglă menționată"].fillna("").astype(str).str.strip().eq("Da").sum()
@@ -1237,8 +1486,16 @@ def demographics(df: pd.DataFrame):
             pie_count(child_df, "Vii cu copiii la meci?", "Children at matches share", order=children_match_order)
 
 
-def sentiment(df: pd.DataFrame):
-    tabs = st.tabs(["Emotional connection", "Off-field evaluation", "One-word emotion", "Message tone", "Message theme"])
+def sentiment(df: pd.DataFrame, summaries: dict[str, pd.DataFrame]):
+    tabs = st.tabs([
+        "Emotional connection",
+        "One-word emotion",
+        "Supporter tenure",
+        "What Dinamo does well",
+        "What fans would change",
+        "One message for Dinamo",
+        "Final suggestions",
+    ])
     with tabs[0]:
         score = pd.to_numeric(df["Cât de conectat te simți emoțional cu Dinamo?"], errors="coerce")
         c1, c2 = st.columns(2)
@@ -1246,41 +1503,11 @@ def sentiment(df: pd.DataFrame):
         c2.metric("Median", f"{score.median():.0f}" if score.notna().any() else "N/A")
         ordered_likert_chart(df, "Cât de conectat te simți emoțional cu Dinamo?", "Emotional connection", ["1", "2", "3", "4", "5"])
     with tabs[1]:
-        off_field_order = ["În regres vizibil", "În ușor regres", "Stabil", "În ușoară creștere", "În creștere vizibilă", "Nu am o părere formată"]
-        col1, col2 = st.columns(2)
-        with col1:
-            ordered_likert_chart(
-                df,
-                "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?",
-                "Off-field evaluation",
-                off_field_order,
-                fixed_width=False,
-            )
-        with col2:
-            pie_count(df, "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?", "Off-field evaluation share", order=off_field_order)
-    with tabs[2]:
         bar_count(df, "Dinamo un cuvânt - categorie", "One-word emotion categories", horizontal=True)
         top_bar(df, "Dinamo un cuvânt - normalizat", "Top normalized words/phrases", n=25)
         interactive_word_frequency(df)
         word_cloud(df)
-    with tabs[3]:
-        bar_count(df, "Mesaj pentru Dinamo - ton", "Message tone")
-    with tabs[4]:
-        bar_count(df, "Mesaj pentru Dinamo - temă", "Message theme", horizontal=True)
-
-
-def club(df: pd.DataFrame):
-    tabs = st.tabs([
-        "Supporter tenure",
-        "What Dinamo does well",
-        "What fans would change",
-        "Logo / identity",
-        "Season ticket drivers",
-        "Brand conflict sensitivity",
-        "Sponsor purchase lift",
-        "Suggestions",
-    ])
-    with tabs[0]:
+    with tabs[2]:
         supporter_tenure_order = ["Am început recent", "De câțiva ani", "De peste 10 ani", "De mic, am crescut cu Dinamo"]
         col1, col2 = st.columns(2)
         with col1:
@@ -1293,11 +1520,38 @@ def club(df: pd.DataFrame):
             )
         with col2:
             pie_count(df, "De cât timp ești suporter Dinamo?", "Supporter tenure share", order=supporter_tenure_order)
-    with tabs[1]:
-        bar_count(df, "Ce face Dinamo BINE - categorie", "What Dinamo does well", horizontal=True)
-    with tabs[2]:
-        bar_count(df, "Dacă ai putea schimba un singur lucru - categorie", "What fans would change", horizontal=True)
     with tabs[3]:
+        open_answer_analysis(summaries, "col_1", "What Dinamo does well")
+    with tabs[4]:
+        open_answer_analysis(summaries, "col_2", "What fans would change")
+    with tabs[5]:
+        open_answer_analysis(summaries, "col_3", "One message for Dinamo")
+    with tabs[6]:
+        open_answer_analysis(summaries, "col_4", "Final suggestions")
+
+
+def club(df: pd.DataFrame):
+    tabs = st.tabs([
+        "Off-field evaluation",
+        "Logo / identity",
+        "Season ticket drivers",
+        "Brand conflict sensitivity",
+        "Sponsor purchase lift",
+    ])
+    with tabs[0]:
+        off_field_order = ["În regres vizibil", "În ușor regres", "Stabil", "În ușoară creștere", "În creștere vizibilă", "Nu am o părere formată"]
+        col1, col2 = st.columns(2)
+        with col1:
+            ordered_likert_chart(
+                df,
+                "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?",
+                "Off-field evaluation",
+                off_field_order,
+                fixed_width=False,
+            )
+        with col2:
+            pie_count(df, "Cum evaluezi clubul Dinamo în afara terenului, în ultima perioadă?", "Off-field evaluation share", order=off_field_order)
+    with tabs[1]:
         col1, col2 = st.columns(2)
         with col1:
             mention_data = logo_mention_counts(df)
@@ -1329,7 +1583,7 @@ def club(df: pd.DataFrame):
         if sources:
             source_df = pd.DataFrame({"Source column": sources})
             top_bar(source_df, "Source column", "Where logo was mentioned", n=15)
-    with tabs[4]:
+    with tabs[2]:
         data = split_multiselect_counts(df, "Ce te-ar determina să îți faci abonament pentru sezonul viitor?")
         if data.empty:
             st.info("No season ticket driver data.")
@@ -1379,22 +1633,20 @@ def club(df: pd.DataFrame):
                     uniformtext_mode="hide",
                 )
                 st.plotly_chart(pie_fig, use_container_width=True)
-    with tabs[5]:
+    with tabs[3]:
         brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
         col1, col2 = st.columns(2)
         with col1:
             ordered_likert_chart(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity", brand_order, fixed_width=False)
         with col2:
             pie_count(df, "Cât de mult contează pentru tine dacă un brand pe care îl cumperi se asociază cu un alt club de fotbal?", "Brand conflict sensitivity share", order=brand_order)
-    with tabs[6]:
+    with tabs[4]:
         brand_order = ["Deloc", "Puțin", "Destul de mult", "Foarte mult"]
         col1, col2 = st.columns(2)
         with col1:
             ordered_likert_chart(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift", brand_order, fixed_width=False)
         with col2:
             pie_count(df, "Dacă un brand sponsorizează Dinamo, cât de mult îți crește intenția de cumpărare?", "Sponsor purchase lift share", order=brand_order)
-    with tabs[7]:
-        bar_count(df, "Sugestie suplimentară - categorie", "Suggestions", horizontal=True)
 
 
 def main():
@@ -1527,7 +1779,7 @@ def main():
     )
 
     if source == SURVEY_SOURCE:
-        df, _ = load_workbook(DATA_PATH)
+        df, summaries = load_workbook(DATA_PATH)
         df = prepare_data(df)
 
         st.title("Dinamo Fan Survey Dashboard")
@@ -1539,7 +1791,7 @@ def main():
         if menu == "Demographics":
             demographics(filtered)
         elif menu == "Sentiment":
-            sentiment(filtered)
+            sentiment(filtered, summaries)
         else:
             club(filtered)
     else:
