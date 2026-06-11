@@ -128,6 +128,24 @@ def pie_palette() -> list[str]:
     return PIE_COLORS
 
 
+def contrast_pie_palette() -> list[str]:
+    if current_theme_type() == "dark":
+        return [
+            DINAMO_RED,
+            "#f3f4f6",
+            "#7f8794",
+            "#ff7a82",
+            "#4b5563",
+        ]
+    return [
+        DINAMO_RED,
+        BLACK,
+        "#9ca3af",
+        "#f08f8f",
+        "#dddddd",
+    ]
+
+
 def donut_palette() -> list[str]:
     if current_theme_type() == "dark":
         return [DINAMO_RED, theme_color("neutral"), "#d1d5db", "#ff7a82"]
@@ -590,6 +608,7 @@ def pie_count(
     title: str,
     order: list[str] | None = None,
     top_n: int | None = None,
+    contrast: bool = False,
 ):
     data = percent_count(df, col, order=order)
     if data.empty:
@@ -608,7 +627,7 @@ def pie_count(
         names=col,
         values="count",
         title=title,
-        color_discrete_sequence=pie_palette(),
+        color_discrete_sequence=contrast_pie_palette() if contrast else pie_palette(),
         custom_data=["count", "percentage"],
     )
     fig.update_traces(
@@ -1673,11 +1692,7 @@ def demographics(df: pd.DataFrame):
             bar_count(df, "age_band", "Age bands", order=age_order, fixed_width=False)
         pie_count(df, "age_band", "Age band share", order=age_order)
     with tabs[1]:
-        col1, col2 = st.columns(2)
-        with col1:
-            donut(df, "Gen", "Gender")
-        with col2:
-            pie_count(df, "Gen", "Gender share")
+        pie_count(df, "Gen", "Gender share", contrast=True)
     with tabs[2]:
         romania_county_map(df)
         top_bar(df, "Județ atribuit", "Top counties")
@@ -1687,11 +1702,7 @@ def demographics(df: pd.DataFrame):
         pie_count(df, "Regiune atribuită", "Region share")
     with tabs[4]:
         if "Mediu atribuit" in df.columns:
-            col1, col2 = st.columns(2)
-            with col1:
-                donut(df, "Mediu atribuit", "Urban / rural")
-            with col2:
-                pie_count(df, "Mediu atribuit", "Urban / rural share")
+            pie_count(df, "Mediu atribuit", "Urban / rural share", contrast=True)
         else:
             st.info("No urban/rural data in the workbook.")
     with tabs[5]:
@@ -1706,11 +1717,7 @@ def demographics(df: pd.DataFrame):
         ordered_likert_chart(df, "Educație", "Education", education_order)
         pie_count(df, "Educație", "Education share", order=education_order)
     with tabs[7]:
-        col1, col2 = st.columns(2)
-        with col1:
-            donut(df, "Ai copii?", "Children")
-        with col2:
-            pie_count(df, "Ai copii?", "Children share")
+        pie_count(df, "Ai copii?", "Children share", contrast=True)
     with tabs[8]:
         child_df = df[df["Ai copii?"].astype(str).str.lower().eq("da")]
         ordered_likert_chart(child_df, "Vii cu copiii la meci?", "Children at matches", children_match_order)
