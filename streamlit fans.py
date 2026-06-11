@@ -783,7 +783,14 @@ def bigram_theme_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.Da
             cols.append(pct_col)
         out = sheet[cols].copy()
         out.columns = ["theme", "count"] + (["percentage"] if pct_col else [])
-        out["subthemes"] = ""
+        key_terms_by_count = {}
+        if "Responses" in sheet.columns and "Key terms incluse" in sheet.columns:
+            details = sheet[["Responses", "Key terms incluse"]].copy()
+            details["count"] = details["Responses"].map(analysis_count)
+            details["key_terms"] = details["Key terms incluse"].fillna("").astype(str).str.strip()
+            details = details[details["count"].gt(0) & details["key_terms"].ne("")]
+            key_terms_by_count = details.groupby("count")["key_terms"].apply(lambda values: "; ".join(dict.fromkeys(values))).to_dict()
+        out["subthemes"] = out["count"].map(lambda value: key_terms_by_count.get(analysis_count(value), ""))
 
     out["theme"] = out["theme"].fillna("").astype(str).str.strip()
     out["count"] = out["count"].map(analysis_count)
@@ -866,7 +873,14 @@ def classified_table(summaries: dict[str, pd.DataFrame], prefix: str) -> pd.Data
     return sheet.rename(columns=renamed).reset_index(drop=True)
 
 
-def analysis_count_bar(data: pd.DataFrame, label_col: str, count_col: str, title: str, top_n: int | None = None):
+def analysis_count_bar(
+    data: pd.DataFrame,
+    label_col: str,
+    count_col: str,
+    title: str,
+    top_n: int | None = None,
+    hover_col: str | None = None,
+):
     if data.empty:
         st.info("No data in this analysis table.")
         return
@@ -874,6 +888,11 @@ def analysis_count_bar(data: pd.DataFrame, label_col: str, count_col: str, title
     if top_n:
         plot_data = plot_data.head(top_n)
     plot_data["count_label"] = plot_data[count_col].map(lambda value: f"{int(value):,}")
+    custom_data = [count_col]
+    if "percentage" in plot_data.columns:
+        custom_data.append("percentage")
+    if hover_col and hover_col in plot_data.columns:
+        custom_data.append(hover_col)
     fig = px.bar(
         plot_data.sort_values(count_col),
         x=count_col,
@@ -881,10 +900,14 @@ def analysis_count_bar(data: pd.DataFrame, label_col: str, count_col: str, title
         orientation="h",
         text="count_label",
         title=title,
-        custom_data=[count_col, "percentage"] if "percentage" in plot_data.columns else [count_col],
+        custom_data=custom_data,
     )
-    if "percentage" in plot_data.columns:
+    if hover_col and hover_col in plot_data.columns and "percentage" in plot_data.columns:
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Share: %{customdata[1]:.1%}<br>Key terms incluse: %{customdata[2]}<extra></extra>")
+    elif "percentage" in plot_data.columns:
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Share: %{customdata[1]:.1%}<extra></extra>")
+    elif hover_col and hover_col in plot_data.columns:
+        fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Key terms incluse: %{customdata[1]}<extra></extra>")
     else:
         fig.update_traces(hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<extra></extra>")
     fig.update_traces(marker_color=DINAMO_RED, textposition="outside")
@@ -950,7 +973,7 @@ def open_answer_analysis(summaries: dict[str, pd.DataFrame], prefix: str, title:
     st.markdown("#### Bigram signals")
     left, right = st.columns([2, 1])
     with left:
-        analysis_count_bar(bigrams, "bigram", "count", "Top bigrams", top_n=20)
+        analysis_count_bar(bigram_themes, "theme", "count", "Bigram theme distribution", hover_col="subthemes")
         with st.expander("Bigram table", expanded=False):
             st.dataframe(bigrams, use_container_width=True, hide_index=True)
         if not bigram_themes.empty:
