@@ -31,6 +31,11 @@ PLATFORM_SOURCES = [
 SOURCE_OPTIONS = [SURVEY_SOURCE] + PLATFORM_SOURCES
 SURVEY_MENUS = ["Demographics", "Sentiment", "Club"]
 PLATFORM_MENUS = ["Demographics"]
+CUSTOM_ANALYSIS_SHEETS = {
+    f"col_{idx}_{suffix}"
+    for idx in range(1, 5)
+    for suffix in ["keywords", "topics", "classified", "classified_RESULTS"]
+}
 
 DINAMO_RED = "#e30613"
 DARK_RED = "#9d0208"
@@ -202,7 +207,8 @@ def find_col(df: pd.DataFrame, contains: str) -> str:
 
 
 @st.cache_data
-def load_workbook(path: Path) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
+def load_workbook(path: Path, modified_ns: int, file_size: int) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
+    _ = modified_ns, file_size
     xl = pd.ExcelFile(path)
     df = pd.read_excel(path, sheet_name="responses_with_judet")
     summaries = {
@@ -864,6 +870,15 @@ def analysis_percentage_bar(data: pd.DataFrame, label_col: str, title: str):
 
 
 def open_answer_analysis(summaries: dict[str, pd.DataFrame], prefix: str, title: str):
+    required = [f"{prefix}_{suffix}" for suffix in ["keywords", "topics", "classified", "classified_RESULTS"]]
+    missing = [sheet for sheet in required if sheet not in summaries]
+    if missing:
+        st.error(
+            "The custom analysis sheets are not loaded yet. Refresh the app after the latest workbook update. "
+            f"Missing sheets: {', '.join(missing)}"
+        )
+        return
+
     st.caption("This open-answer analysis uses the full survey analysis sheets and does not change with sidebar filters.")
 
     keywords = keyword_table(summaries, prefix)
@@ -1779,7 +1794,8 @@ def main():
     )
 
     if source == SURVEY_SOURCE:
-        df, summaries = load_workbook(DATA_PATH)
+        workbook_stat = DATA_PATH.stat()
+        df, summaries = load_workbook(DATA_PATH, workbook_stat.st_mtime_ns, workbook_stat.st_size)
         df = prepare_data(df)
 
         st.title("Dinamo Fan Survey Dashboard")
