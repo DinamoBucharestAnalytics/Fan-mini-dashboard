@@ -527,6 +527,40 @@ def percent_count(df: pd.DataFrame, col: str, order: list[str] | None = None) ->
     return out
 
 
+def pie_hover_texts(
+    data: pd.DataFrame,
+    label_col: str,
+    count_col: str = "count",
+    percentage_col: str = "percentage",
+    count_label: str = "Count",
+    percentage_label: str = "Percentage",
+) -> list[str]:
+    texts = []
+    for _, row in data.iterrows():
+        label = "" if pd.isna(row.get(label_col)) else str(row.get(label_col))
+        count = pd.to_numeric(row.get(count_col), errors="coerce")
+        percentage = pd.to_numeric(row.get(percentage_col), errors="coerce")
+        count_text = "N/A" if pd.isna(count) else f"{count:,.0f}"
+        percentage_text = "N/A" if pd.isna(percentage) else f"{percentage:.1%}"
+        texts.append(f"{label}<br>{count_label}: {count_text}<br>{percentage_label}: {percentage_text}")
+    return texts
+
+
+def apply_pie_hover(
+    fig,
+    data: pd.DataFrame,
+    label_col: str,
+    count_col: str = "count",
+    percentage_col: str = "percentage",
+    count_label: str = "Count",
+    percentage_label: str = "Percentage",
+):
+    fig.update_traces(
+        hovertext=pie_hover_texts(data, label_col, count_col, percentage_col, count_label, percentage_label),
+        hovertemplate="%{hovertext}<extra></extra>",
+    )
+
+
 def bar_count(
     df: pd.DataFrame,
     col: str,
@@ -592,12 +626,11 @@ def donut(df: pd.DataFrame, col: str, title: str):
         hole=0.55,
         title=title,
         color_discrete_sequence=donut_palette(),
-        custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="percent+label",
-        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
     )
+    apply_pie_hover(fig, data, col)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -628,15 +661,14 @@ def pie_count(
         values="count",
         title=title,
         color_discrete_sequence=contrast_pie_palette() if contrast else pie_palette(),
-        custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
+    apply_pie_hover(fig, data, col)
     fig.update_layout(
         showlegend=False,
         margin=dict(l=10, r=10, t=50, b=10),
@@ -670,15 +702,14 @@ def country_romania_other_pie(df: pd.DataFrame):
         title="România vs Others",
         color="Country group",
         color_discrete_map={"România": DINAMO_RED, "Others": theme_color("neutral")},
-        custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
+    apply_pie_hover(fig, data, "Country group")
     fig.update_layout(
         showlegend=False,
         margin=dict(l=10, r=10, t=50, b=10),
@@ -705,15 +736,14 @@ def other_countries_pie(df: pd.DataFrame):
         values="count",
         title="Top 10 other countries",
         color_discrete_sequence=pie_palette(),
-        custom_data=["count", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
+    apply_pie_hover(fig, data, "country_norm")
     fig.update_layout(
         showlegend=False,
         margin=dict(l=10, r=10, t=50, b=10),
@@ -1498,15 +1528,14 @@ def social_age_pie(demo_df: pd.DataFrame, platform: str):
         values="total_in_age",
         title=f"Age share - {platform}",
         color_discrete_sequence=pie_palette(),
-        custom_data=["total_in_age", "pct_on_platform"],
     )
     fig.update_traces(
         textinfo="label+percent",
         textposition="outside",
-        hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
         marker=dict(line=dict(color=theme_color("surface"), width=1)),
         automargin=True,
     )
+    apply_pie_hover(fig, data, "age", count_col="total_in_age", percentage_col="pct_on_platform", count_label=metric_label)
     fig.update_layout(
         showlegend=False,
         margin=dict(l=10, r=10, t=50, b=10),
@@ -1569,12 +1598,11 @@ def social_sex_charts(demo_df: pd.DataFrame, platform: str):
         title=f"Sex distribution - {platform}",
         color="Sex",
         color_discrete_map={"Men": DINAMO_RED, "Women": theme_color("neutral")},
-        custom_data=["followers", "percentage"],
     )
     fig.update_traces(
         textinfo="label+percent",
-        hovertemplate=f"%{{label}}<br>{metric_label}: %{{customdata[0]:,.0f}}<br>Percentage: %{{customdata[1]:.1%}}<extra></extra>",
     )
+    apply_pie_hover(fig, data, "Sex", count_col="followers", count_label=metric_label)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -1795,12 +1823,11 @@ def club(df: pd.DataFrame):
                 title="Logo mentioned, % of all respondents",
                 color="Siglă menționată",
                 color_discrete_map={"Da": DINAMO_RED, "Nu": theme_color("neutral")},
-                custom_data=["count", "percentage"],
             )
             fig.update_traces(
                 textinfo="percent+label",
-                hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
             )
+            apply_pie_hover(fig, mention_data, "Siglă menționată")
             fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=VERTICAL_CHART_HEIGHT)
             st.plotly_chart(fig, use_container_width=True)
         with col2:
@@ -1845,14 +1872,18 @@ def club(df: pd.DataFrame):
                 values="count",
                 title="Season ticket drivers share",
                 color_discrete_sequence=pie_palette(),
-                custom_data=["count", "percentage"],
             )
             pie_fig.update_traces(
                 textinfo="label+percent",
                 textposition="outside",
-                hovertemplate="%{label}<br>Count: %{customdata[0]:,.0f}<br>Respondent percentage: %{customdata[1]:.1%}<extra></extra>",
                 marker=dict(line=dict(color=theme_color("surface"), width=1)),
                 automargin=True,
+            )
+            apply_pie_hover(
+                pie_fig,
+                data,
+                "Ce te-ar determina să îți faci abonament pentru sezonul viitor?",
+                percentage_label="Respondent percentage",
             )
             pie_fig.update_layout(
                 showlegend=False,
