@@ -316,8 +316,8 @@ ISO3 = {
 
 
 st.set_page_config(
-    page_title="Dinamo Fan Survey Dashboard",
-    page_icon="data/img/dinamo-data-analysis-red.ico",
+    page_title="Dinamo Fan Analytics",
+    page_icon=str(LOGO_PATH),
     layout="wide",
 )
 
