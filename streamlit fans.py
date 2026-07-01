@@ -1,4 +1,3 @@
-import base64
 import json
 import math
 import re
@@ -160,8 +159,10 @@ def configure_chart_theme():
         px.defaults.template = active_theme()["plot_template"]
 
 
-def image_data_uri(path: Path, mime_type: str) -> str:
-    return f"data:{mime_type};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
+def render_sidebar_logo() -> None:
+    if not LOGO_PATH.exists():
+        return
+    st.logo(str(LOGO_PATH), size="large")
 
 
 def horizontal_chart_height(row_count: int, minimum: int = 420, per_row: int = 34, maximum: int = 900) -> int:
@@ -2097,32 +2098,48 @@ def main():
         section[data-testid="stSidebar"] {
             background: var(--app-surface);
             border-right: 1px solid var(--app-border);
-            width: 190px !important;
-            min-width: 190px !important;
-            max-width: 190px !important;
+            width: 244px !important;
+            min-width: 244px !important;
+            max-width: 244px !important;
+        }
+        [data-testid="stSidebarHeader"] {
+            position: relative;
+            min-height: 15.25rem !important;
+            height: 15.25rem !important;
+            padding: 0 !important;
+            border-bottom: 1px solid var(--app-border) !important;
+            background: var(--app-surface);
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        [data-testid="stSidebarLogo"] {
+            width: 14.25rem !important;
+            max-width: 14.25rem !important;
+            height: 14.25rem !important;
+            max-height: 14.25rem !important;
+            object-fit: contain;
+            display: block !important;
+        }
+        [data-testid="stLogoLink"],
+        [data-testid="stSidebarHeader"] > div:first-child {
+            margin: 0 auto !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        [data-testid="stSidebarCollapseButton"] {
+            position: absolute !important;
+            top: 0.5rem !important;
+            right: 0.25rem !important;
+            z-index: 2;
         }
         section[data-testid="stSidebar"] > div {
-            padding-top: 1.25rem;
+            padding-top: 0;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            width: 190px !important;
-        }
-        .sidebar-brand {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.6rem;
-            width: 148px;
-            padding: 1rem 0 0.25rem;
-            margin: auto auto 0;
-            border-top: 1px solid var(--app-border);
-        }
-        .sidebar-brand img {
-            width: 132px;
-            height: auto;
-            object-fit: contain;
-            flex: 0 0 auto;
+            width: 244px !important;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] {
             width: 100%;
@@ -2134,11 +2151,11 @@ def main():
             flex-direction: column;
             align-items: center;
             gap: 0.5rem;
-            width: 148px;
+            width: 202px;
             margin: 0 auto;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] label {
-            width: 148px;
+            width: 202px;
             min-height: 44px;
             padding: 0.62rem 0.78rem;
             border: 1px solid var(--app-border-strong);
@@ -2170,7 +2187,7 @@ def main():
             width: 100%;
         }
         section[data-testid="stSidebar"] [data-testid="stSelectbox"] {
-            width: 148px;
+            width: 202px;
             margin: 1rem auto 1rem;
         }
         section[data-testid="stSidebar"] [data-testid="stSelectbox"] p {
@@ -2188,6 +2205,7 @@ def main():
         """,
         unsafe_allow_html=True,
     )
+    render_sidebar_logo()
     current_source = st.session_state.get("source_selector", SURVEY_SOURCE)
     if current_source not in SOURCE_OPTIONS:
         current_source = SURVEY_SOURCE
@@ -2206,15 +2224,6 @@ def main():
         )
     else:
         menu = "Demographics"
-    logo_uri = image_data_uri(LOGO_PATH, "image/png")
-    st.sidebar.markdown(
-        f"""
-        <div class="sidebar-brand">
-            <img src="{logo_uri}" alt="Dinamo Data Analysis logo">
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     if source == SURVEY_SOURCE:
         workbook_stat = DATA_PATH.stat()
