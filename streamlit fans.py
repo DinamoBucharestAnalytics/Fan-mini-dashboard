@@ -1550,22 +1550,21 @@ def ziua_drapelului_location_map(df: pd.DataFrame):
         st.info("No geocoded locations available for this source.")
         return
 
-    mappable["marker_size"] = mappable["count"].map(lambda value: max(8, min(34, 8 + math.sqrt(value) * 5)))
+    mappable["marker_size"] = mappable["count"].map(lambda value: max(5, min(11, 5 + math.log1p(value) * 1.6)))
     fig = px.scatter_geo(
         mappable,
         lat="lat",
         lon="lon",
-        size="marker_size",
         hover_name="location",
         custom_data=["count", "submitted_country", "geocode_query", "display_name"],
         title="Locations - Ziua Drapelului Naţional",
     )
     fig.update_traces(
         marker=dict(
+            size=mappable["marker_size"].tolist(),
             color=DINAMO_RED,
-            opacity=0.84,
+            opacity=0.9,
             line=dict(color=theme_color("surface"), width=1.2),
-            sizemode="diameter",
         ),
         hovertemplate=(
             "<b>%{hovertext}</b><br>"
