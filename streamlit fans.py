@@ -1550,7 +1550,7 @@ def ziua_drapelului_location_map(df: pd.DataFrame):
         st.info("No geocoded locations available for this source.")
         return
 
-    mappable["marker_size"] = mappable["count"].map(lambda value: max(20, min(40, 20 + math.log1p(value) * 6)))
+    mappable["marker_size"] = mappable["count"].map(lambda value: max(10, min(20, 10 + math.log1p(value) * 3)))
     fig = px.scatter_geo(
         mappable,
         lat="lat",
