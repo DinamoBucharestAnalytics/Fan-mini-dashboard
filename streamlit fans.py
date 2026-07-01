@@ -19,7 +19,7 @@ SOCIAL_MEDIA_GEO_PATH = SOCIAL_MEDIA_DIR / "Power BI source.xlsx"
 SOCIAL_MEDIA_DEMO_PATH = SOCIAL_MEDIA_DIR / "Age and sex.xlsx"
 ZIUA_DRAPELULUI_GEO_PATH = BASE_DIR / "data" / "ziua_drapelului_geocoded.csv"
 RO_GEOJSON_PATH = BASE_DIR / "romania.geojson"
-LOGO_PATH = BASE_DIR / "data" / "img" / "dinamo-data-analysis-red.ico"
+LOGO_PATH = BASE_DIR / "data" / "img" / "dinamo-sigla-01.png"
 
 SURVEY_SOURCE = "Survey (May 2026)"
 ZIUA_DRAPELULUI_SOURCE = "Ziua Drapelului Naţional"
@@ -2119,18 +2119,10 @@ def main():
             border-top: 1px solid var(--app-border);
         }
         .sidebar-brand img {
-            width: 84px;
-            height: 84px;
+            width: 132px;
+            height: auto;
             object-fit: contain;
             flex: 0 0 auto;
-        }
-        .sidebar-brand-title {
-            color: var(--app-text);
-            font-size: 1.05rem;
-            font-weight: 800;
-            letter-spacing: 0;
-            line-height: 1.1;
-            text-align: center;
         }
         section[data-testid="stSidebar"] [data-testid="stRadio"] {
             width: 100%;
@@ -2214,12 +2206,11 @@ def main():
         )
     else:
         menu = "Demographics"
-    logo_uri = image_data_uri(LOGO_PATH, "image/x-icon")
+    logo_uri = image_data_uri(LOGO_PATH, "image/png")
     st.sidebar.markdown(
         f"""
         <div class="sidebar-brand">
             <img src="{logo_uri}" alt="Dinamo Data Analysis logo">
-            <div class="sidebar-brand-title">Fan Analytics</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2250,14 +2241,12 @@ def main():
             geo_stat.st_size,
         )
 
-        st.title("Dinamo Fan Analytics")
         st.subheader(f"{source} - Demographics")
         ziua_drapelului_demographics(geo_df)
     else:
         geo_df = load_social_media_geo(SOCIAL_MEDIA_GEO_PATH)
         demo_df = load_social_media_demographics(SOCIAL_MEDIA_DEMO_PATH)
 
-        st.title("Dinamo Fan Analytics")
         st.subheader(f"{source} - {menu}")
         if menu == "Demographics":
             platform_demographics(demo_df, geo_df, source)
