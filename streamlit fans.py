@@ -17,10 +17,12 @@ DATA_PATH = BASE_DIR / "data" / "fan_survey_dashboard.xlsx"
 SOCIAL_MEDIA_DIR = BASE_DIR / "data" / "social_media"
 SOCIAL_MEDIA_GEO_PATH = SOCIAL_MEDIA_DIR / "Power BI source.xlsx"
 SOCIAL_MEDIA_DEMO_PATH = SOCIAL_MEDIA_DIR / "Age and sex.xlsx"
+ZIUA_DRAPELULUI_GEO_PATH = BASE_DIR / "data" / "ziua_drapelului_geocoded.csv"
 RO_GEOJSON_PATH = BASE_DIR / "romania.geojson"
 LOGO_PATH = BASE_DIR / "data" / "img" / "dinamo-data-analysis-red.ico"
 
 SURVEY_SOURCE = "Survey (May 2026)"
+ZIUA_DRAPELULUI_SOURCE = "Ziua Drapelului Naţional"
 PLATFORM_SOURCES = [
     "Club mobile app",
     "Club Facebook",
@@ -28,7 +30,7 @@ PLATFORM_SOURCES = [
     "Fan Youtube (RD1948)",
     "Merchandise",
 ]
-SOURCE_OPTIONS = [SURVEY_SOURCE] + PLATFORM_SOURCES
+SOURCE_OPTIONS = [SURVEY_SOURCE] + PLATFORM_SOURCES + [ZIUA_DRAPELULUI_SOURCE]
 SURVEY_MENUS = ["Demographics", "Sentiment", "Club"]
 PLATFORM_MENUS = ["Demographics"]
 CUSTOM_ANALYSIS_SHEETS = {
@@ -446,6 +448,29 @@ def load_social_media_demographics(path: Path) -> pd.DataFrame:
     df["men_pct"] = _fraction(df["men_pct"])
     df["women_pct"] = _fraction(df["women_pct"])
     return df[df["platform"].isin(PLATFORM_SOURCES)].copy()
+
+
+@st.cache_data
+def load_ziua_drapelului_geo(path: Path, modified_ns: int, file_size: int) -> pd.DataFrame:
+    _ = modified_ns, file_size
+    df = pd.read_csv(path)
+    required = {"location", "count", "lat", "lon", "geocode_status"}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing Ziua Drapelului columns: {', '.join(sorted(missing))}")
+
+    df["location"] = df["location"].astype(str).str.strip()
+    df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0).astype(int)
+    df["lat"] = pd.to_numeric(df["lat"], errors="coerce")
+    df["lon"] = pd.to_numeric(df["lon"], errors="coerce")
+    df["geocode_status"] = df["geocode_status"].astype(str).str.strip()
+    for col in ["geocode_query", "display_name", "country", "country_code"]:
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].fillna("").astype(str).str.strip()
+    df["submitted_country"] = df["location"].map(lambda value: str(value).split(",")[-1].strip())
+    df["submitted_country"] = df["submitted_country"].map(lambda value: COUNTRY_NORMALIZE.get(normalize_text(value), value))
+    return df[df["location"].ne("") & df["count"].gt(0)].copy()
 
 
 def social_platform_geo(df: pd.DataFrame, platform: str, level: str) -> pd.DataFrame:
@@ -1472,6 +1497,138 @@ def social_county_map(df: pd.DataFrame, platform: str):
             st.dataframe(unmapped[["county_norm", "followers", "percentage"]], use_container_width=True, hide_index=True)
 
 
+def weighted_percent_count(df: pd.DataFrame, col: str, weight_col: str = "count") -> pd.DataFrame:
+    work = df[[col, weight_col]].copy()
+    work[col] = work[col].fillna("").astype(str).str.strip()
+    work = work[work[col].ne("") & work[col].ne("nan")]
+    work[weight_col] = pd.to_numeric(work[weight_col], errors="coerce").fillna(0)
+    if work.empty:
+        return pd.DataFrame(columns=[col, "count", "percentage"])
+
+    out = work.groupby(col, as_index=False)[weight_col].sum().rename(columns={weight_col: "count"})
+    out["count"] = out["count"].astype(int)
+    out = out.sort_values("count", ascending=False)
+    total = out["count"].sum()
+    out["percentage"] = out["count"] / total if total else 0
+    return out
+
+
+def weighted_top_bar(data: pd.DataFrame, label_col: str, title: str, n: int = 20):
+    counts = weighted_percent_count(data, label_col).head(n)
+    if counts.empty:
+        st.info("No data for the current source.")
+        return
+
+    counts["percentage_label"] = counts["percentage"].map(lambda value: f"{value:.1%}")
+    plot_data = with_horizontal_bar_display_value(counts.sort_values("percentage"), "percentage")
+    fig = px.bar(
+        plot_data,
+        x=HORIZONTAL_BAR_DISPLAY_COL,
+        y=label_col,
+        orientation="h",
+        text="percentage_label",
+        title=title,
+        custom_data=["count", "percentage"],
+    )
+    fig.update_traces(
+        marker_color=DINAMO_RED,
+        hovertemplate="%{y}<br>Count: %{customdata[0]:,.0f}<br>Percentage: %{customdata[1]:.1%}<extra></extra>",
+        **horizontal_bar_text_kwargs(plot_data),
+    )
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=horizontal_chart_height(len(counts), minimum=500, per_row=30),
+        **hidden_horizontal_axis_layout(counts, "percentage"),
+    )
+    render_bar_chart(fig)
+
+
+def ziua_drapelului_location_map(df: pd.DataFrame):
+    mappable = df[df["geocode_status"].eq("ok") & df["lat"].notna() & df["lon"].notna()].copy()
+    if mappable.empty:
+        st.info("No geocoded locations available for this source.")
+        return
+
+    mappable["marker_size"] = mappable["count"].map(lambda value: max(8, min(34, 8 + math.sqrt(value) * 5)))
+    fig = px.scatter_geo(
+        mappable,
+        lat="lat",
+        lon="lon",
+        size="marker_size",
+        hover_name="location",
+        custom_data=["count", "submitted_country", "geocode_query", "display_name"],
+        title="Locations - Ziua Drapelului Naţional",
+    )
+    fig.update_traces(
+        marker=dict(
+            color=DINAMO_RED,
+            opacity=0.84,
+            line=dict(color=theme_color("surface"), width=1.2),
+            sizemode="diameter",
+        ),
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"
+            "Count: %{customdata[0]:,.0f}<br>"
+            "Country: %{customdata[1]}<br>"
+            "Geocode query: %{customdata[2]}<br>"
+            "Matched: %{customdata[3]}"
+            "<extra></extra>"
+        ),
+    )
+    fig.update_geos(
+        projection_type="natural earth",
+        showcoastlines=True,
+        coastlinecolor=theme_color("map_line"),
+        showcountries=True,
+        countrycolor=theme_color("map_line"),
+        showland=True,
+        landcolor=theme_color("map_land"),
+        showocean=True,
+        oceancolor=theme_color("map_ocean"),
+        lonaxis_range=(-130, 150),
+        lataxis_range=(0, 72),
+    )
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=MAP_CHART_HEIGHT,
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def ziua_drapelului_demographics(df: pd.DataFrame):
+    tabs = st.tabs(["Country"])
+    with tabs[0]:
+        total = int(pd.to_numeric(df["count"], errors="coerce").fillna(0).sum())
+        unique_locations = int(len(df))
+        mapped_locations = int(df["lat"].notna().mul(df["lon"].notna()).sum())
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Entries", f"{total:,}")
+        c2.metric("Unique locations", f"{unique_locations:,}")
+        c3.metric("Mapped locations", f"{mapped_locations:,}")
+
+        ziua_drapelului_location_map(df)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            weighted_top_bar(df, "location", "Top locations", n=20)
+        with col2:
+            weighted_top_bar(df, "submitted_country", "Top countries", n=20)
+
+        with st.expander("Geocoding audit", expanded=False):
+            audit_cols = [
+                "location",
+                "count",
+                "lat",
+                "lon",
+                "geocode_query",
+                "display_name",
+                "geocode_status",
+            ]
+            st.dataframe(df[audit_cols].sort_values("count", ascending=False), use_container_width=True, hide_index=True)
+
+
 def social_age_data(demo_df: pd.DataFrame, platform: str) -> pd.DataFrame:
     view = demo_df[demo_df["platform"].eq(platform)].copy()
     if view.empty:
@@ -2043,19 +2200,21 @@ def main():
     current_source = st.session_state.get("source_selector", SURVEY_SOURCE)
     if current_source not in SOURCE_OPTIONS:
         current_source = SURVEY_SOURCE
-    menu_options = SURVEY_MENUS if current_source == SURVEY_SOURCE else PLATFORM_MENUS
-
-    menu = st.sidebar.radio(
-        "Dashboard section",
-        menu_options,
-        label_visibility="collapsed",
-    )
     source = st.sidebar.selectbox(
         "Source",
         SOURCE_OPTIONS,
         index=SOURCE_OPTIONS.index(current_source),
         key="source_selector",
     )
+    if source == SURVEY_SOURCE:
+        menu = st.sidebar.radio(
+            "Dashboard section",
+            SURVEY_MENUS,
+            label_visibility="collapsed",
+            key="survey_menu_selector",
+        )
+    else:
+        menu = "Demographics"
     logo_uri = image_data_uri(LOGO_PATH, "image/x-icon")
     st.sidebar.markdown(
         f"""
@@ -2084,6 +2243,17 @@ def main():
             sentiment(filtered, summaries)
         else:
             club(filtered)
+    elif source == ZIUA_DRAPELULUI_SOURCE:
+        geo_stat = ZIUA_DRAPELULUI_GEO_PATH.stat()
+        geo_df = load_ziua_drapelului_geo(
+            ZIUA_DRAPELULUI_GEO_PATH,
+            geo_stat.st_mtime_ns,
+            geo_stat.st_size,
+        )
+
+        st.title("Dinamo Fan Analytics")
+        st.subheader(f"{source} - Demographics")
+        ziua_drapelului_demographics(geo_df)
     else:
         geo_df = load_social_media_geo(SOCIAL_MEDIA_GEO_PATH)
         demo_df = load_social_media_demographics(SOCIAL_MEDIA_DEMO_PATH)
