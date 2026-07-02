@@ -17,8 +17,8 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent
 SOURCE_PATH = Path(
-    r"C:\Users\Razvan\Documents\Scouting\Data analysis department\Idei extrasportive"
-    r"\DATA HARTA.xlsx"
+    r"C:\Users\Razvan\Documents\Scouting\Data analysis department"
+    r"\FINAL RAW DATA.csv"
 )
 OUTPUT_PATH = BASE_DIR / "data" / "ziua_drapelului_geocoded.csv"
 USER_AGENT = "dinamo-fan-dashboard-ziua-drapelului/1.0"
@@ -49,9 +49,13 @@ def read_locations(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(path)
 
-    raw = pd.read_excel(path, header=None, names=["location"])
+    if path.suffix.lower() == ".csv":
+        raw = pd.read_csv(path, header=None, usecols=[1], names=["location"], encoding="utf-8-sig")
+    else:
+        raw = pd.read_excel(path, header=None, names=["location"])
     raw["location"] = raw["location"].astype(str).str.strip()
     raw = raw[raw["location"].ne("") & raw["location"].ne("nan")]
+    raw = raw[~raw["location"].str.lower().str.contains(r"\.(?:jpg|jpeg|png|heic|mp4)$", regex=True)]
 
     counts = raw["location"].value_counts().rename_axis("location").reset_index(name="count")
     return counts.sort_values("location").reset_index(drop=True)

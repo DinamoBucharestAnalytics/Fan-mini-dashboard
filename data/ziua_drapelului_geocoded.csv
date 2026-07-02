@@ -1,21 +1,22 @@
 ﻿location,count,lat,lon,geocode_query,display_name,osm_type,osm_id,place_rank,class,type,importance,country,country_code,geocode_status
 "Abu Dhabi Region, Abu Dhabi, United Arab Emirates",1,24.4538352,54.3774014,"Abu Dhabi, United Arab Emirates","أبو ظبي, الإمارات العربية المتحدة",relation,4479763,10,boundary,administrative,0.6730854864187279,الإمارات العربية المتحدة,ae,ok
+"Alba Iulia, Alba County, Romania",1,46.0682753,23.5664761,"Alba Iulia, Alba, Romania","Alba Iulia, Alba, România",relation,10630982,16,boundary,administrative,0.6041264487401428,România,ro,ok
 "Arnsberg, North Rhine-Westphalia, Germany",1,51.4002384,8.0605908,"Arnsberg, North Rhine-Westphalia, Germany","Arnsberg, Hochsauerlandkreis, Nordrhein-Westfalen, Deutschland",relation,157396,16,boundary,administrative,0.548433855527644,Deutschland,de,ok
-"Bacau, Bacău County, Romania",1,46.5560493,26.9153557,"Bacau, Romania","Bacău, România",relation,10715726,16,boundary,administrative,0.5847066979273076,România,ro,ok
+"Bacau, Bacău County, Romania",2,46.5560493,26.9153557,"Bacau, Romania","Bacău, România",relation,10715726,16,boundary,administrative,0.5847066979273076,România,ro,ok
 "Bicester, Oxfordshire, England, United Kingdom",1,51.8988385,-1.1518770,"Bicester, Oxfordshire, United Kingdom","Bicester, Cherwell, Oxfordshire, England, United Kingdom",relation,4169918,20,boundary,administrative,0.47141288733854275,United Kingdom,gb,ok
 "Bistrița, Bistrița-Năsăud County, Romania",1,47.1327012,24.4963949,"Bistrița, Bistrița-Năsăud, Romania","Bistrița, Bistrița-Năsăud, 420048, România",node,128561166,16,place,city,0.5627872217319319,România,ro,ok
 "Bistrița-Năsăud County, Romania",1,47.1772548,24.5411592,"Bistrița-Năsăud, Romania","Bistrița-Năsăud, România",relation,55466,8,boundary,administrative,0.5721257899105512,România,ro,ok
 "Blaj, Alba County, Romania",2,46.1741571,23.9224826,"Blaj, Alba, Romania","Blaj, Alba, România",relation,10631057,16,boundary,administrative,0.5444946754296744,România,ro,ok
 "Bragadiru, Ilfov County, Romania",1,44.3735120,25.9804935,"Bragadiru, Ilfov, Romania","Bragadiru, Ilfov, România",relation,9849620,16,boundary,administrative,0.4332896429128263,România,ro,ok
 "Brașov, Brașov, Romania",2,45.6525105,25.6105654,"Brașov, Romania","Brașov, Zona Metropolitană Brașov, Brașov, România",relation,10367676,16,boundary,administrative,0.6513230783481843,România,ro,ok
-"Bucharest, Bucharest, Romania",24,44.4361414,26.1026840,"Bucharest, Romania","București, România",relation,377733,8,boundary,administrative,0.761229833694605,România,ro,ok
+"Bucharest, Bucharest, Romania",26,44.4361414,26.1026840,"Bucharest, Romania","București, România",relation,377733,8,boundary,administrative,0.761229833694605,România,ro,ok
 "Buftea, Ilfov County, Romania",1,44.5598204,25.9498918,"Buftea, Ilfov, Romania","Buftea, Ilfov, România",relation,9851026,16,boundary,administrative,0.5030996920578263,România,ro,ok
 "Buzău, Buzău County, Romania",6,45.2692582,26.7748173,"Buzău, Romania","Buzău, România",relation,2355511,8,boundary,administrative,0.5719044132463098,România,ro,ok
 "Campina, Prahova, Romania",1,45.1256956,25.7348044,"Campina, Prahova, Romania","Câmpina, Prahova, 105600, România",relation,14701878,16,boundary,administrative,0.5099454369511308,România,ro,ok
 "Chiajna, Ilfov County, Romania",1,44.4588774,25.9778979,"Chiajna, Ilfov, Romania","Chiajna, Ilfov, România",relation,9849584,16,boundary,administrative,0.3463314325418498,România,ro,ok
 "Cluj-Napoca, Cluj County, Romania",2,46.7693790,23.5899542,"Cluj-Napoca, Cluj, Romania","Cluj-Napoca, Zona Metropolitană Cluj, Cluj, România",relation,3277038,16,boundary,administrative,0.6855720334805757,România,ro,ok
 "Codlea, Brașov, Romania",1,45.6924431,25.4490362,"Codlea, Brașov, Romania","Codlea, Zona Metropolitană Brașov, Brașov, 505100, România",relation,10515006,16,boundary,administrative,0.47141288733854275,România,ro,ok
-"Constanța, Constanța, Romania",1,44.1767161,28.6507598,"Constanța, Romania","Constanța, Zona Metropolitană Constanța, Constanța, România",relation,10487782,16,boundary,administrative,0.6242787851555099,România,ro,ok
+"Constanța, Constanța, Romania",2,44.1767161,28.6507598,"Constanța, Romania","Constanța, Zona Metropolitană Constanța, Constanța, România",relation,10487782,16,boundary,administrative,0.6242787851555099,România,ro,ok
 "Cook County, Illinois, United States",1,41.8197385,-87.7565250,"Cook, Illinois, United States","Cook County, Illinois, United States",relation,122576,12,boundary,administrative,0.611390963976843,United States,us,ok
 "Copsa Mica, Sibiu, Romania",1,46.1123071,24.2282191,"Copsa Mica, Sibiu, Romania","Copșa Mică, Sibiu, 555400, România",relation,10514341,16,boundary,administrative,0.18671166781109327,România,ro,ok
 "County Leitrim, Ireland",1,54.1401622,-8.0524782,"Leitrim, Ireland","County Leitrim, Connacht, Éire / Ireland",relation,284368,12,boundary,administrative,0.24004500114442662,Éire / Ireland,ie,ok
@@ -32,6 +33,7 @@
 "Giurgiu, Giurgiu County, Romania",2,43.8961275,25.9656448,"Giurgiu, Romania","Giurgiu, România",relation,10697456,16,boundary,administrative,0.5538963749148857,România,ro,ok
 "Gradistea, Ilfov County, Romania",1,44.6620848,26.3005774,"Gradistea, Ilfov, Romania","Grădiștea, Ilfov, România",relation,9877780,16,boundary,administrative,0.3492426022163027,România,ro,ok
 "Hochdorf District, Lucerne, Switzerland",2,47.1665361,8.2899709,"Hochdorf, Lucerne, Switzerland","Hochdorf, Luzern, Schweiz/Suisse/Svizzera/Svizra",relation,1682868,16,boundary,administrative,0.43051382543298305,Schweiz/Suisse/Svizzera/Svizra,ch,ok
+"Iaslovăț, Suceava County, Romania",1,47.7586184,25.9774206,"Iaslovăț, Suceava, Romania","Iaslovăț, Suceava, 727320, România",relation,14778637,16,boundary,administrative,0.4066038770967066,România,ro,ok
 "Iași County, Romania",1,47.1615598,27.5837814,"Iași, Romania","Iași, Zona Metropolitană Iași, Iași, România",relation,1207838,16,boundary,administrative,0.6524594196921784,România,ro,ok
 "Ilfov County, Romania",1,44.5017074,26.2449077,"Ilfov, Romania","Ilfov, România",relation,2366996,8,boundary,administrative,0.5512582444462739,România,ro,ok
 "Karlsruhe, Baden-Württemberg, Germany",1,49.0068705,8.4034195,"Karlsruhe, Baden-Württemberg, Germany","Karlsruhe, Baden-Württemberg, Deutschland",relation,62518,12,boundary,administrative,0.688516783044913,Deutschland,de,ok
@@ -46,9 +48,12 @@
 "Municipiul Câmpulung Moldovenesc, Suceava County, Romania",1,47.5297764,25.5597482,"Câmpulung Moldovenesc, Romania","Câmpulung Moldovenesc, Suceava, 725100, România",relation,10495796,16,boundary,administrative,0.5120595131353421,România,ro,ok
 "New York, United States",1,40.7127281,-74.0060152,"New York, United States","New York, United States",relation,175905,10,boundary,administrative,0.8817923363604117,United States,us,ok
 "Oltenita, Călărași County, Romania",1,44.0905153,26.6406794,"Oltenita, Călărași, Romania","Oltenița, Călărași, 915400, România",relation,10697515,16,boundary,administrative,0.49150266478693183,România,ro,ok
+"Oradea, Bihor County, Romania",1,47.0549163,21.9285231,"Oradea, Bihor, Romania","Oradea, Zona Metropolitană Oradea, Bihor, 410100, România",node,2691094601,16,place,city,0.633691971435197,România,ro,ok
 "Orastie, Hunedoara, Romania",1,45.8367637,23.1958453,"Orastie, Hunedoara, Romania","Orăștie, Hunedoara, 335700, România",relation,10494276,16,boundary,administrative,0.519282728957397,România,ro,ok
 "Paris, Île-de-France, France",1,48.8534951,2.3483915,"Paris, Île-de-France, France","Paris, Île-de-France, France métropolitaine, France",relation,71525,12,boundary,administrative,0.897098092136026,France,fr,ok
 "Pitesti, Argeș, Romania",1,44.8572882,24.8721156,"Pitesti, Argeș, Romania","Pitești, Argeș, România",relation,10664174,16,boundary,administrative,0.5860646867920811,România,ro,ok
+"Ploiesti, Prahova, Romania",1,44.9417468,26.0236504,"Ploiesti, Prahova, Romania","Ploiești, Prahova, România",relation,10694407,16,boundary,administrative,0.6041458141340481,România,ro,ok
+"Plătărești, Călărași County, Romania",1,44.3550307,26.3638533,"Plătărești, Călărași, Romania","Plătărești, Călărași, România",relation,13803910,16,boundary,administrative,0.3567097398182398,România,ro,ok
 "Predeal - Sarari, Prahova, Romania",2,45.1919632,26.1139885,"Predeal-Sarari, Prahova, Romania","Predeal-Sărari, Prahova, România",relation,14701730,16,boundary,administrative,0.1867165964751659,România,ro,ok
 "Province of Ancona, Marche, Italy",1,43.4801189,13.2187279,"Ancona, Italy","Ancona, Marche, Italia",relation,53059,12,boundary,administrative,0.7180325357055573,Italia,it,ok
 "Pungesti, Vaslui County, Romania",1,46.7086053,27.3379604,"Pungesti, Vaslui, Romania","Pungești, Vaslui, 737445, România",node,388492741,19,place,village,0.41093751640421666,România,ro,ok
